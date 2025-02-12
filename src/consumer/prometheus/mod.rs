@@ -20,6 +20,8 @@ impl TryFrom<IpAddress> for Prometheus {
         let mut labels = Vec::new();
         labels.push(("__meta_netbox_status".into(), value.status.to_string()));
         labels.push(("__meta_netbox_id".into(), value.id.to_string()));
+        let family: u8 = value.family.into();
+        labels.push(("__meta_netbox_family".into(), family.to_string()));
         if let Some(tenant) = value.full_tenant {
             labels.push(("__meta_netbox_tenant".into(), tenant.slug));
             if let Some(group) = tenant.group {

@@ -32,6 +32,15 @@ impl TryFrom<IntermediateFamily> for Family {
     }
 }
 
+impl From<Family> for u8 {
+    fn from(value: Family) -> Self {
+        match value {
+            Family::IPv4 => 4,
+            Family::IPv6 => 6,
+        }
+    }
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BriefTenant {
     pub id: i64,
