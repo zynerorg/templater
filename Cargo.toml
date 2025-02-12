@@ -19,3 +19,4 @@ ipnet = { version = "2.11.0", features = ["serde"] }
 chrono = { version = "0.4.39", features = ["serde"] }
 tldextract = "0.6.0"
 serde_yaml = "0.9.34"
+serde-tuple-vec-map = "1.0.1"

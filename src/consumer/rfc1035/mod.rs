@@ -25,7 +25,7 @@ impl Rfc1035 {
     pub fn push(addresses: Vec<IpAddress>, cmd: &Cmd) -> anyhow::Result<()> {
         let domains: Domains = addresses.into();
         for domain in domains.0 {
-            let mut w = if let Some(directory) = &cmd.directory {
+            let mut w = if let Some(directory) = &cmd.output {
                 if let Err(err) = create_dir(directory) {
                     if err.kind() != std::io::ErrorKind::AlreadyExists {
                         return Err(err.into());

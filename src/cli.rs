@@ -53,8 +53,8 @@ pub struct Prometheus {
 
 #[derive(Default, Debug, Clone)]
 pub enum PrometheusFormat {
-    #[default]
     Yaml,
+    #[default]
     Json,
 }
 
@@ -89,7 +89,7 @@ pub struct Rfc1035 {
     pub ttl: usize,
     /// Zonefile output directory
     #[arg(short('o'), long, env, value_name = "DIRECTORY")]
-    pub directory: Option<PathBuf>,
+    pub output: Option<PathBuf>,
     /// Disable SOA record generation
     #[arg(short, long, env)]
     pub disable_soa: bool,
