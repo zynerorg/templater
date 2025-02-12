@@ -17,7 +17,6 @@ use crate::{
 
 pub struct Rfc1035 {
     name: String,
-    ttl: usize,
     family: Family,
     rdata: String,
 }
@@ -44,18 +43,20 @@ impl Rfc1035 {
             let records = domain
                 .addresses
                 .into_iter()
-                .filter_map(|address| Self::from_ipaddress(address, cmd.ttl))
+                .filter_map(Self::from_ipaddress)
                 .collect::<Vec<Self>>();
+
+            writeln!(w, "$ORIGIN .")?;
+            writeln!(w, "$TTL {}", cmd.ttl)?;
 
             if let (Some(ns), Some(email)) = (&cmd.primary_nameserver, &cmd.administrator_email) {
                 writeln!(
                     w,
-                    "{}\t{}\tIN\tSOA\t{} {} {} {} {} {} {}",
+                    "{}\tIN\tSOA\t{} {} {} {} {} {} {}",
                     domain.name,
-                    cmd.ttl,
                     ns,
                     email,
-                    Utc::now().timestamp_millis(),
+                    Utc::now().timestamp(),
                     cmd.refresh,
                     cmd.retry,
                     cmd.expire,
@@ -71,10 +72,9 @@ impl Rfc1035 {
         Ok(())
     }
 
-    fn from_ipaddress(address: IpAddress, ttl: usize) -> Option<Self> {
+    fn from_ipaddress(address: IpAddress) -> Option<Self> {
         Some(Self {
             name: address.dns_name?,
-            ttl,
             family: address.family,
             rdata: address.address.addr().to_string(),
         })
@@ -87,10 +87,6 @@ impl Display for Rfc1035 {
             Family::IPv4 => "A",
             Family::IPv6 => "AAAA",
         };
-        write!(
-            f,
-            "{}\t{}\t{}\tIN\t{}",
-            self.name, self.ttl, type_, self.rdata
-        )
+        write!(f, "{}\tIN\t{}\t{}", self.name, type_, self.rdata)
     }
 }

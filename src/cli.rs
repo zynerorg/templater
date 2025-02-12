@@ -88,7 +88,7 @@ pub struct Rfc1035 {
     #[arg(short, long, env, default_value = "3600")]
     pub ttl: usize,
     /// Zonefile output directory
-    #[arg(short('o'), long, value_name = "DIRECTORY")]
+    #[arg(short('o'), long, env, value_name = "DIRECTORY")]
     pub directory: Option<PathBuf>,
     /// Disable SOA record generation
     #[arg(short, long, env)]
