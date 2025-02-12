@@ -21,7 +21,7 @@ use crate::{
 };
 
 fn main() -> Result<()> {
-    dotenv()?;
+    dotenv().ok();
     pretty_env_logger::formatted_builder()
         .filter_level(log::LevelFilter::Info)
         .parse_default_env()
