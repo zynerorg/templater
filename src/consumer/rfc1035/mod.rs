@@ -17,8 +17,15 @@ use crate::{
 
 pub struct Rfc1035 {
     name: String,
-    family: Family,
+    rtype: RType,
     rdata: String,
+}
+
+#[allow(clippy::upper_case_acronyms)]
+enum RType {
+    A,
+    AAAA,
+    SOA,
 }
 
 impl Rfc1035 {
@@ -49,22 +56,28 @@ impl Rfc1035 {
             writeln!(w, "$ORIGIN .")?;
             writeln!(w, "$TTL {}", cmd.ttl)?;
 
+            let width = records.iter().fold(usize::MIN, |a, b| a.max(b.name.len()));
+
             if let (Some(ns), Some(email)) = (&cmd.primary_nameserver, &cmd.administrator_email) {
-                writeln!(
-                    w,
-                    "{}\tIN\tSOA\t{} {} {} {} {} {} {}",
-                    domain.name,
-                    ns,
-                    email,
-                    Utc::now().timestamp(),
-                    cmd.refresh,
-                    cmd.retry,
-                    cmd.expire,
-                    cmd.minimum
-                )?;
+                let soa = Rfc1035 {
+                    name: domain.name.clone(),
+                    rtype: RType::SOA,
+                    rdata: format!(
+                        "{} {} {} {} {} {} {}",
+                        ns,
+                        email,
+                        Utc::now().timestamp(),
+                        cmd.refresh,
+                        cmd.retry,
+                        cmd.expire,
+                        cmd.minimum
+                    ),
+                };
+                writeln!(w, "{}", soa.format(width))?;
             }
+
             for record in records {
-                writeln!(w, "{record}")?;
+                writeln!(w, "{}", record.format(width))?;
             }
             info!("Finished writing domain {}", domain.name);
         }
@@ -75,18 +88,41 @@ impl Rfc1035 {
     fn from_ipaddress(address: IpAddress) -> Option<Self> {
         Some(Self {
             name: address.dns_name?,
-            family: address.family,
+            rtype: address.family.into(),
             rdata: address.address.addr().to_string(),
         })
     }
+
+    fn format(&self, width: usize) -> String {
+        let abc = 4usize;
+        format!(
+            "{:width$}    IN    {:abc$}    {}",
+            self.name,
+            self.rtype.to_string(),
+            self.rdata
+        )
+    }
 }
 
-impl Display for Rfc1035 {
+impl Display for RType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let type_ = match self.family {
-            Family::IPv4 => "A",
-            Family::IPv6 => "AAAA",
-        };
-        write!(f, "{}\tIN\t{}\t{}", self.name, type_, self.rdata)
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::A => "A",
+                Self::AAAA => "AAAA",
+                Self::SOA => "SOA",
+            }
+        )
+    }
+}
+
+impl From<Family> for RType {
+    fn from(family: Family) -> Self {
+        match family {
+            Family::IPv4 => Self::A,
+            Family::IPv6 => Self::AAAA,
+        }
     }
 }
