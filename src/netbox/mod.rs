@@ -11,39 +11,16 @@ use reqwest::{
 use serde::de::DeserializeOwned;
 use tldextract::{TldExtractor, TldOption};
 
-use crate::{cli::Cli, netbox::data::tenant::Tenant};
+use crate::{
+    cli::Cli,
+    netbox::data::{common::BriefSite, tenant::Tenant},
+};
 
 pub mod data;
 
-// TODO: Dedup
-macro_rules! gen_filter {
-    ($address:ident, $cli:ident, $name:ident, $sub:ident) => {
-        if let Some(a) = &$cli.$name {
-            let mut state = false;
-            let Some(address_name) = &$address.$name else {
-                return false;
-            };
-            for value in a {
-                state = state || value == &address_name.$sub;
-            }
-            if !state {
-                return false;
-            };
-        }
-    };
-    ($address:ident, $cli:ident, $name:ident) => {
-        if let Some(a) = &$cli.$name {
-            let mut state = false;
-            let Some(address_name) = $name else {
-                return false;
-            };
-            for value in a {
-                state = state || value == address_name;
-            }
-            if !state {
-                return false;
-            };
-        }
+macro_rules! filter {
+    ($cli:expr, $address:expr) => {
+        Netbox::filter_c($cli.as_ref(), |cli| Some(*cli == $address))
     };
 }
 
@@ -114,12 +91,12 @@ impl Netbox {
         let tenants: Vec<Tenant> = self.get_list("/tenancy/tenants", None)?;
 
         for address in &mut addresses {
-            let mut site = None;
+            let mut scope = None;
             let mut vlan = None;
             for prefix in &prefixes {
-                if prefix.prefix.contains(&address.address) {
-                    if let Some(site_i) = &prefix.site {
-                        site = Some(site_i);
+                if prefix.prefix.contains(&address.address.addr()) {
+                    if let Some(scope_i) = &prefix.scope {
+                        scope = Some(scope_i);
                     }
                     if let Some(vlan_i) = &prefix.vlan {
                         vlan = Some(vlan_i);
@@ -127,7 +104,7 @@ impl Netbox {
                 }
             }
 
-            address.site = site.cloned();
+            address.scope = scope.cloned();
             address.vlan = vlan.cloned();
 
             if let Some(tenant) = &address.tenant {
@@ -152,15 +129,30 @@ impl Netbox {
         addresses
             .into_iter()
             .filter(|address| {
-                gen_filter!(address, cli, tenant, slug);
-                gen_filter!(address, cli, site, slug);
-                gen_filter!(address, cli, vlan, vid);
-                let status = Some(&address.status);
-                gen_filter!(address, cli, status);
-                let domain = &address.domain;
-                gen_filter!(address, cli, domain);
-                true
+                filter!(cli.tenant, address.tenant.as_ref()?.slug)
+                    && filter!(
+                        cli.tenant_group,
+                        address.full_tenant.as_ref()?.group.as_ref()?.slug
+                    )
+                    && filter!(cli.vlan, address.vlan.as_ref()?.vid)
+                    && filter!(cli.status, address.status)
+                    && filter!(cli.domain, *address.domain.as_ref()?)
+                    && filter!(
+                        cli.site,
+                        TryInto::<&BriefSite>::try_into(address.scope.as_ref()?)
+                            .ok()?
+                            .slug
+                    )
+                    && filter!(cli.family, address.family)
             })
             .collect()
+    }
+
+    fn filter_c<F, T>(cli: Option<&Vec<T>>, filter: F) -> bool
+    where
+        F: Fn(&T) -> Option<bool>,
+    {
+        let Some(cli) = cli else { return true };
+        cli.iter().any(|f| filter(f).unwrap_or(false))
     }
 }

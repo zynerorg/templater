@@ -1,3 +1,6 @@
+use std::str::FromStr;
+
+use anyhow::{anyhow, Error};
 use serde::Deserializer;
 use serde_derive::{Deserialize, Serialize};
 
@@ -17,18 +20,14 @@ pub enum Family {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct IntermediateFamily {
-    pub value: i64,
+    pub value: u8, // Can only be 4 or 6 so u8 is enough
     pub label: String,
 }
 
 impl TryFrom<IntermediateFamily> for Family {
-    type Error = String;
+    type Error = Error;
     fn try_from(value: IntermediateFamily) -> Result<Self, Self::Error> {
-        Ok(match value.value {
-            4 => Family::IPv4,
-            6 => Family::IPv6,
-            _ => return Err("Unexpected IP family".into()),
-        })
+        value.value.try_into()
     }
 }
 
@@ -38,6 +37,28 @@ impl From<Family> for u8 {
             Family::IPv4 => 4,
             Family::IPv6 => 6,
         }
+    }
+}
+
+impl TryFrom<u8> for Family {
+    type Error = Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        Ok(match value {
+            4 => Self::IPv4,
+            6 => Self::IPv6,
+            _ => return Err(anyhow!("Unexpected integer")),
+        })
+    }
+}
+
+impl FromStr for Family {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "ipv4" => Self::IPv4,
+            "ipv6" => Self::IPv6,
+            _ => u8::from_str(s)?.try_into()?,
+        })
     }
 }
 

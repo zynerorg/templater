@@ -1,4 +1,7 @@
+use core::convert::TryFrom;
+
 use chrono::{DateTime, Utc};
+use derive_more::TryInto;
 use ipnet::IpNet;
 use serde_derive::{Deserialize, Serialize};
 
@@ -14,7 +17,7 @@ pub struct Prefix {
     pub display: String,
     pub family: Family,
     pub prefix: IpNet,
-    pub site: Option<BriefSite>,
+    pub scope: Option<Scope>,
     pub vrf: Option<BriefVrf>,
     pub tenant: Option<BriefTenant>,
     pub vlan: Option<BriefVlan>,
@@ -68,4 +71,15 @@ pub struct Role {
     pub description: Option<String>,
     pub prefix_count: Option<i64>,
     pub vlan_count: Option<i64>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, TryInto)]
+#[try_into(owned, ref, ref_mut)]
+#[serde(untagged)] // FIXME: Cannot get adjacently tagged to work
+pub enum Scope {
+    #[default]
+    Location,
+    Region,
+    Site(BriefSite),
+    SiteGroup,
 }

@@ -1,5 +1,6 @@
 use std::{fmt::Display, str::FromStr};
 
+use anyhow::{anyhow, Error};
 use chrono::{DateTime, Utc};
 use ipnet::IpNet;
 use serde_derive::{Deserialize, Serialize};
@@ -7,9 +8,9 @@ use serde_json::Value;
 
 use super::{
     common::{
-        AssignedObject, BriefSite, BriefTenant, BriefVlan, BriefVrf, CustomFields, Family,
-        Intermediate, Tag,
+        AssignedObject, BriefTenant, BriefVlan, BriefVrf, CustomFields, Family, Intermediate, Tag,
     },
+    prefix::Scope,
     tenant::Tenant,
 };
 
@@ -44,7 +45,7 @@ pub struct IpAddress {
     pub last_updated: DateTime<Utc>,
 
     // Custom
-    pub site: Option<BriefSite>,
+    pub scope: Option<Scope>,
     pub vlan: Option<BriefVlan>,
     pub full_tenant: Option<Tenant>,
     pub domain: Option<String>,
@@ -113,7 +114,7 @@ impl From<Vec<IpAddress>> for Domains {
 }
 
 impl FromStr for Status {
-    type Err = String;
+    type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
             "active" => Status::Active,
@@ -140,14 +141,14 @@ impl Display for Status {
 }
 
 impl TryFrom<Intermediate> for Status {
-    type Error = String;
+    type Error = Error;
     fn try_from(value: Intermediate) -> Result<Self, Self::Error> {
         Self::from_str(&value.value)
     }
 }
 
 impl TryFrom<Intermediate> for Role {
-    type Error = String;
+    type Error = Error;
     fn try_from(value: Intermediate) -> Result<Self, Self::Error> {
         Ok(match value.value.as_str() {
             "loopback" => Role::Loopback,
@@ -158,7 +159,7 @@ impl TryFrom<Intermediate> for Role {
             "hsrp" => Role::Hsrp,
             "glbp" => Role::Glbp,
             "carp" => Role::Carp,
-            _ => return Err("Unexpected role".into()),
+            _ => return Err(anyhow!("Unexpected role")),
         })
     }
 }

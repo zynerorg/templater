@@ -1,8 +1,9 @@
 use std::{path::PathBuf, str::FromStr};
 
+use anyhow::{anyhow, Error};
 use clap::{builder::PossibleValue, Args, Parser, Subcommand, ValueEnum};
 
-use crate::netbox::data::ip_address::Status;
+use crate::netbox::data::{common::Family, ip_address::Status};
 
 #[derive(Debug, Clone, Parser)]
 #[command()]
@@ -17,6 +18,9 @@ pub struct Cli {
     /// Netbox ip address tenant
     #[arg(short, long, env, value_delimiter = ',')]
     pub tenant: Option<Vec<String>>,
+    /// Netbox ip address tenant group
+    #[arg(short('g'), long, env, value_delimiter = ',')]
+    pub tenant_group: Option<Vec<String>>,
     /// Netbox parent prefix site
     #[arg(short, long, env, value_delimiter = ',')]
     pub site: Option<Vec<String>>,
@@ -29,6 +33,9 @@ pub struct Cli {
     /// Netbox ip address status
     #[arg(short('r'), long, env, value_delimiter = ',')]
     pub status: Option<Vec<Status>>,
+    /// Netbox ip address family
+    #[arg(short, long, env, value_delimiter = ',')]
+    pub family: Option<Vec<Family>>,
 
     #[command(subcommand)]
     pub command: Commands,
@@ -59,12 +66,12 @@ pub enum PrometheusFormat {
 }
 
 impl FromStr for PrometheusFormat {
-    type Err = String;
+    type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
             "yaml" => PrometheusFormat::Yaml,
             "json" => PrometheusFormat::Json,
-            _ => return Err("Unexpected format".into()),
+            _ => return Err(anyhow!("Unexpected format")),
         })
     }
 }

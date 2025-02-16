@@ -4,7 +4,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::{
     cli::{Prometheus as Cmd, PrometheusFormat},
-    netbox::data::ip_address::IpAddress,
+    netbox::data::{ip_address::IpAddress, prefix::Scope},
 };
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -28,7 +28,7 @@ impl TryFrom<IpAddress> for Prometheus {
                 labels.push(("__meta_netbox_tenant_group".into(), group.slug));
             }
         }
-        if let Some(site) = value.site {
+        if let Some(Scope::Site(site)) = value.scope {
             labels.push(("__meta_netbox_site".into(), site.slug.to_string()));
         }
         if let Some(dns_name) = value.dns_name {
