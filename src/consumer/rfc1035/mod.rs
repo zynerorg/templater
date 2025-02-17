@@ -1,12 +1,12 @@
 use std::{
     cmp::PartialEq,
-    fmt::Display,
     fs::{create_dir, File},
     io::{stdout, Write},
     path::PathBuf,
 };
 
 use chrono::Utc;
+use derive_more::Display;
 use log::{debug, info};
 use zoneparser::{RRType, Record, ZoneParser};
 
@@ -25,6 +25,7 @@ pub struct Rfc1035 {
 }
 
 #[allow(clippy::upper_case_acronyms)]
+#[derive(Display)]
 enum RType {
     A,
     AAAA,
@@ -173,20 +174,6 @@ impl Rfc1035 {
         }
 
         a.iter().zip(b.iter()).filter(|(a, b)| **a == ***b).count() == a.len()
-    }
-}
-
-impl Display for RType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::A => "A",
-                Self::AAAA => "AAAA",
-                Self::SOA => "SOA",
-            }
-        )
     }
 }
 

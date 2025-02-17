@@ -122,7 +122,7 @@ impl FromStr for Status {
             "deprecated" => Status::Deprecated,
             "dhcp" => Status::Dhcp,
             "slaac" => Status::Slaac,
-            _ => return Err("Unexpected status".into()),
+            _ => return Err(anyhow!("Unexpected status")),
         })
     }
 }
