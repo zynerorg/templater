@@ -21,4 +21,4 @@ tldextract = "0.6.0"
 serde_yaml = "0.9.34"
 serde-tuple-vec-map = "1.0.1"
 zoneparser = "0.1.4"
-derive_more = { version = "2.0.1", features = ["display", "try_into"] }
+derive_more = { version = "2.0.1", features = ["display", "from", "try_into"] }

@@ -1,4 +1,7 @@
+use std::fmt::Debug;
+
 use anyhow::Result;
+use derive_more::From;
 use log::info;
 use serde_derive::{Deserialize, Serialize};
 
@@ -11,28 +14,40 @@ use crate::{
 pub struct Prometheus {
     targets: Vec<String>,
     #[serde(with = "tuple_vec_map")]
-    labels: Vec<(String, String)>,
+    labels: Vec<(String, Data)>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, From)]
+#[serde(untagged)]
+enum Data {
+    String(String),
+    Integer(i64),
+    #[default]
+    Null,
 }
 
 impl TryFrom<IpAddress> for Prometheus {
     type Error = ();
     fn try_from(value: IpAddress) -> Result<Self, Self::Error> {
-        let mut labels = Vec::new();
-        labels.push(("__meta_netbox_status".into(), value.status.to_string()));
-        labels.push(("__meta_netbox_id".into(), value.id.to_string()));
+        let mut labels: Vec<(String, Data)> = Vec::new();
+        labels.push((
+            "__meta_netbox_status".into(),
+            value.status.to_string().into(),
+        ));
+        labels.push(("__meta_netbox_id".into(), value.id.into()));
         let family: u8 = value.family.into();
-        labels.push(("__meta_netbox_family".into(), family.to_string()));
+        labels.push(("__meta_netbox_family".into(), i64::from(family).into()));
         if let Some(tenant) = value.full_tenant {
-            labels.push(("__meta_netbox_tenant".into(), tenant.slug));
+            labels.push(("__meta_netbox_tenant".into(), tenant.slug.into()));
             if let Some(group) = tenant.group {
-                labels.push(("__meta_netbox_tenant_group".into(), group.slug));
+                labels.push(("__meta_netbox_tenant_group".into(), group.slug.into()));
             }
         }
         if let Some(Scope::Site(site)) = value.scope {
-            labels.push(("__meta_netbox_site".into(), site.slug.to_string()));
+            labels.push(("__meta_netbox_site".into(), site.slug.to_string().into()));
         }
         if let Some(dns_name) = value.dns_name {
-            labels.push(("__meta_netbox_dns_name".into(), dns_name.to_string()));
+            labels.push(("__meta_netbox_dns_name".into(), dns_name.to_string().into()));
         }
 
         Ok(Self {
