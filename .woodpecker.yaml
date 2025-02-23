@@ -1,0 +1,15 @@
+when:
+  - event: push
+    branch: main
+
+steps:
+  - name: publish
+    image: quay.io/woodpeckerci/plugin-kaniko
+    settings:
+      auto_tag: true
+      registry: reg.zyner.org
+      repo: internal/templater
+      username:
+        from_secret: registry-username
+      password:
+        from_secret: registry-password
