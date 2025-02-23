@@ -56,6 +56,9 @@ pub struct Prometheus {
     /// Output format
     #[arg(short, long, env, value_enum, default_value_t)]
     pub format: PrometheusFormat,
+    /// Output file
+    #[arg(short('o'), long, env, value_name = "FILENAME")]
+    pub output: Option<PathBuf>,
 }
 
 #[derive(Default, Debug, Clone)]

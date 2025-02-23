@@ -1,8 +1,12 @@
-use std::fmt::Debug;
+use std::{
+    fmt::Debug,
+    fs::File,
+    io::{stdout, Write},
+};
 
 use anyhow::Result;
 use derive_more::From;
-use log::info;
+use log::{debug, info};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{
@@ -66,13 +70,22 @@ impl Prometheus {
             .collect::<Vec<Self>>();
 
         info!("Printing in Prometheus File SD format");
-        println!(
+        let mut w = if let Some(path) = &cmd.output {
+            debug!("Opening file {} for writing", path.display());
+            Box::new(File::create(path)?) as Box<dyn Write>
+        } else {
+            debug!("Opening stdout for writing");
+            Box::new(stdout()) as Box<dyn Write>
+        };
+
+        writeln!(
+            w,
             "{}",
             match cmd.format {
                 PrometheusFormat::Yaml => serde_yaml::to_string(&configs)?,
                 PrometheusFormat::Json => serde_json::to_string_pretty(&configs)?,
             }
-        );
+        )?;
 
         Ok(())
     }
