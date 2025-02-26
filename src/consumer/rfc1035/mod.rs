@@ -115,7 +115,14 @@ impl PartialEq<RRType> for RType {
 }
 
 impl Record {
-    fn push(config: &Rfc1035, addresses: Vec<Address>) -> anyhow::Result<()> {
+    fn push(config: &Rfc1035, mut addresses: Vec<Address>) -> anyhow::Result<()> {
+        addresses.sort_by(|a, b| {
+            a.dns_name.cmp(&b.dns_name).then(
+                a.address
+                    .map(|net| net.addr().is_ipv6())
+                    .cmp(&b.address.map(|net| net.addr().is_ipv6())),
+            )
+        });
         let domains: Domains = addresses.into();
         for domain in domains.0 {
             info!("Converting addresses to RFC1035 format");

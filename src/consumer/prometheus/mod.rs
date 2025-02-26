@@ -118,8 +118,14 @@ impl TryFrom<Address> for Data {
 }
 
 impl Data {
-    fn push(config: &Prometheus, addresses: Vec<Address>) -> Result<()> {
+    fn push(config: &Prometheus, mut addresses: Vec<Address>) -> Result<()> {
         info!("Converting addresses to Prometheus File SD format");
+        addresses.sort_by(|a, b| {
+            a.address
+                .map(|net| net.addr().is_ipv6())
+                .cmp(&b.address.map(|net| net.addr().is_ipv6()))
+                .then(a.address.cmp(&b.address))
+        });
         let configs = addresses
             .into_iter()
             .filter_map(|address| Self::try_from(address).ok())
