@@ -100,7 +100,11 @@ enum ConsumerConfig {
 
 impl Config {
     pub fn execute(&self) -> Result<()> {
-        let tld_extractor = TldOption::default().naive_mode(false).build();
+        let tld_extractor = TldOption::default()
+            .naive_mode(
+                true, // Required because it does not like the internal TLD, will break domains like co.uk
+            )
+            .build();
         let mut addresses: Vec<Address> = self
             .providers
             .iter()

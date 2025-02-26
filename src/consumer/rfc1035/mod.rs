@@ -2,6 +2,7 @@ use std::{
     cmp::PartialEq,
     fs::{create_dir, File},
     io::{stdout, Write},
+    net::IpAddr,
     path::PathBuf,
 };
 
@@ -84,6 +85,7 @@ impl Consumer for Rfc1035 {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct Record {
     name: String,
     rtype: RType,
@@ -91,11 +93,12 @@ struct Record {
 }
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Display)]
+#[derive(Display, Debug, Clone, PartialEq, Serialize, Deserialize)]
 enum RType {
     A,
     AAAA,
     SOA,
+    CNAME,
 }
 
 impl PartialEq<ZoneRecord> for Record {
@@ -114,6 +117,12 @@ impl PartialEq<RRType> for RType {
     }
 }
 
+impl From<IpAddr> for RType {
+    fn from(addr: IpAddr) -> Self {
+        if addr.is_ipv4() { Self::A } else { Self::AAAA }
+    }
+}
+
 impl Record {
     fn push(config: &Rfc1035, mut addresses: Vec<Address>) -> anyhow::Result<()> {
         addresses.sort_by(|a, b| {
@@ -123,6 +132,7 @@ impl Record {
                     .cmp(&b.address.map(|net| net.is_ipv6())),
             )
         });
+        // FIXME: Cross-domain CNAME
         let domains: Domains = addresses.into();
         for domain in domains.0 {
             info!("Converting addresses to RFC1035 format");
@@ -130,6 +140,7 @@ impl Record {
                 .addresses
                 .into_iter()
                 .filter_map(Self::from_address)
+                .flatten()
                 .collect::<Vec<Self>>();
 
             let mut w = if let Some(directory) = &config.output {
@@ -205,23 +216,32 @@ impl Record {
         Ok(())
     }
 
-    fn from_address(ip: Address) -> Option<Self> {
-        let rtype = if ip.address?.is_ipv4() {
-            RType::A
-        } else {
-            RType::AAAA
-        };
-        Some(Self {
-            name: ip.dns_name?,
-            rtype,
-            rdata: ip.address?.to_string(),
-        })
+    fn from_address(ip: Address) -> Option<Vec<Self>> {
+        let mut records = Vec::new();
+        if let Some(address) = ip.address {
+            records.push(Self {
+                name: ip.dns_name.as_ref()?.to_owned(),
+                rtype: address.into(),
+                rdata: address.to_string(),
+            });
+        }
+        if let Some(aliases) = ip.alias {
+            for alias in aliases {
+                records.push(Self {
+                    name: alias,
+                    rtype: RType::CNAME,
+                    rdata: ip.dns_name.as_ref()?.to_owned(),
+                })
+            }
+        }
+
+        Some(records)
     }
 
     fn format(&self, width: usize) -> String {
-        let abc = 4usize;
+        let rtype_width = 5usize;
         format!(
-            "{:width$}    IN    {:abc$}    {}",
+            "{:width$}    IN    {:rtype_width$}    {}",
             self.name,
             self.rtype.to_string(),
             self.rdata

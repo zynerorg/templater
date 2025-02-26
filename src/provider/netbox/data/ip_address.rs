@@ -8,8 +8,7 @@ use serde_json::Value;
 
 use super::{
     common::{
-        AssignedObject, BriefSite, BriefTenant, BriefVlan, BriefVrf, CustomFields, Family,
-        Intermediate, Tag,
+        AssignedObject, BriefSite, BriefTenant, BriefVlan, BriefVrf, Family, Intermediate, Tag,
     },
     prefix::Scope,
     tenant::Tenant,
@@ -67,6 +66,10 @@ impl From<IpAddress> for Address {
                 .scope
                 .and_then(|s| TryInto::<BriefSite>::try_into(s).ok().map(|s| s.slug)),
             vlan: None,
+            alias: ip
+                .custom_fields
+                .alias
+                .map(|s| s.lines().map(|s| s.trim().to_string()).collect()),
             ..Default::default()
         }
     }
@@ -95,6 +98,12 @@ pub enum Role {
     Hsrp,
     Glbp,
     Carp,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CustomFields {
+    /// TODO: Make this optional
+    pub alias: Option<String>,
 }
 
 impl FromStr for Status {

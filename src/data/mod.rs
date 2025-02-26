@@ -17,6 +17,7 @@ pub struct Address {
     pub status: Option<String>,
     pub site: Option<String>,
     pub vlan: Option<u16>,
+    pub alias: Option<Vec<String>>,
 }
 
 // There must be a better way than to dupe this, macro maybe?
