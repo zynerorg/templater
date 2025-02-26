@@ -6,19 +6,85 @@ use std::{
 };
 
 use chrono::Utc;
+use clap::Args;
 use derive_more::Display;
 use log::{debug, info};
-use zoneparser::{RRType, Record, ZoneParser};
+use serde_derive::{Deserialize, Serialize};
+use serde_inline_default::serde_inline_default;
+use zoneparser::{RRType, Record as ZoneRecord, ZoneParser};
 
-use crate::{
-    cli::Rfc1035 as Cmd,
-    netbox::data::{
-        common::Family,
-        ip_address::{Domains, IpAddress},
-    },
-};
+use super::Consumer;
+use crate::data::{Address, Domains};
 
+#[serde_inline_default]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Args)]
 pub struct Rfc1035 {
+    /// Zonefile output directory
+    #[arg(long, env("RFC1035_OUTPUT"))]
+    pub output: Option<PathBuf>,
+    /// Record TTL
+    #[arg(long, env("RFC1035_TTL"), default_value = "3_600")]
+    #[serde_inline_default(3_600)]
+    pub ttl: usize,
+    /// Disable SOA record generation
+    #[arg(long, env("RFC1035_DISABLE_SOA"))]
+    #[serde(default)]
+    pub disable_soa: bool,
+    /// Zone Primary nameserver
+    #[arg(
+        long,
+        env("RFC1035_PRIMARY_NAMESERVER"),
+        required_unless_present = "disable_soa"
+    )]
+    pub primary_nameserver: Option<String>,
+    /// Zone Administrator email
+    #[arg(
+        long,
+        env("RFC1035_ADMINISTRATOR_EMAIL"),
+        required_unless_present = "disable_soa"
+    )]
+    pub administrator_email: Option<String>,
+    /// Zone refresh time
+    #[arg(long, env("RFC1035_REFRESH"), default_value = "86_400")]
+    #[serde_inline_default(86_400)]
+    pub refresh: usize,
+    /// Zone retry time
+    #[arg(long, env("RFC1035_RETRY"), default_value = "7_200")]
+    #[serde_inline_default(7_200)]
+    pub retry: usize,
+    // Zone expire time
+    #[arg(long, env("RFC1035_EXPIRE"), default_value = "3_600_000")]
+    #[serde_inline_default(3_600_000)]
+    pub expire: usize,
+    /// Zone minimum TTL
+    #[arg(long, env("RFC1035_MINIMUM"), default_value = "172_800")]
+    #[serde_inline_default(172_800)]
+    pub minimum: usize,
+}
+
+impl Default for Rfc1035 {
+    fn default() -> Self {
+        Self {
+            ttl: 3_600,
+            output: None,
+            disable_soa: false,
+            primary_nameserver: None,
+            administrator_email: None,
+            refresh: 86_400,
+            retry: 7_200,
+            expire: 3_600_000,
+            minimum: 172_800,
+        }
+    }
+}
+
+impl Consumer for Rfc1035 {
+    fn consume(&self, addresses: Vec<Address>) -> anyhow::Result<()> {
+        Record::push(self, addresses)
+    }
+}
+
+struct Record {
     name: String,
     rtype: RType,
     rdata: String,
@@ -32,8 +98,8 @@ enum RType {
     SOA,
 }
 
-impl PartialEq<Record> for Rfc1035 {
-    fn eq(&self, other: &Record) -> bool {
+impl PartialEq<ZoneRecord> for Record {
+    fn eq(&self, other: &ZoneRecord) -> bool {
         if other.data.len() != 1 {
             return false;
         }
@@ -48,18 +114,18 @@ impl PartialEq<RRType> for RType {
     }
 }
 
-impl Rfc1035 {
-    pub fn push(addresses: Vec<IpAddress>, cmd: &Cmd) -> anyhow::Result<()> {
+impl Record {
+    fn push(config: &Rfc1035, addresses: Vec<Address>) -> anyhow::Result<()> {
         let domains: Domains = addresses.into();
         for domain in domains.0 {
             info!("Converting addresses to RFC1035 format");
             let records = domain
                 .addresses
                 .into_iter()
-                .filter_map(Self::from_ipaddress)
+                .filter_map(Self::from_address)
                 .collect::<Vec<Self>>();
 
-            let mut w = if let Some(directory) = &cmd.output {
+            let mut w = if let Some(directory) = &config.output {
                 let path = directory.join(&domain.name);
                 if let Err(err) = create_dir(directory) {
                     if err.kind() != std::io::ErrorKind::AlreadyExists {
@@ -88,12 +154,12 @@ impl Rfc1035 {
             // let soa = Self::extract_soa(&zone).unwrap_or(Utc::now().timestamp() as usize);
 
             writeln!(w, "$ORIGIN .")?;
-            writeln!(w, "$TTL {}", cmd.ttl)?;
+            writeln!(w, "$TTL {}", config.ttl)?;
 
             let width = records.iter().fold(usize::MIN, |a, b| a.max(b.name.len()));
 
             debug!("Writing SOA record to zone {}", domain.name);
-            Self::write_soa(&mut w, cmd, width, domain.name.clone())?;
+            Self::write_soa(&mut w, config, width, domain.name.clone())?;
 
             info!("Writing records to zone {}", domain.name);
             for record in records {
@@ -107,12 +173,12 @@ impl Rfc1035 {
 
     fn write_soa(
         writer: &mut Box<dyn Write>,
-        cmd: &Cmd,
+        config: &Rfc1035,
         width: usize,
         domain_name: String,
     ) -> anyhow::Result<()> {
-        if let (Some(ns), Some(email)) = (&cmd.primary_nameserver, &cmd.administrator_email) {
-            let soa = Rfc1035 {
+        if let (Some(ns), Some(email)) = (&config.primary_nameserver, &config.administrator_email) {
+            let soa = Record {
                 name: domain_name,
                 rtype: RType::SOA,
                 rdata: format!(
@@ -120,10 +186,10 @@ impl Rfc1035 {
                     ns,
                     email,
                     Utc::now().timestamp(),
-                    cmd.refresh,
-                    cmd.retry,
-                    cmd.expire,
-                    cmd.minimum
+                    config.refresh,
+                    config.retry,
+                    config.expire,
+                    config.minimum
                 ),
             };
             writeln!(writer, "{}", soa.format(width))?;
@@ -132,11 +198,16 @@ impl Rfc1035 {
         Ok(())
     }
 
-    fn from_ipaddress(address: IpAddress) -> Option<Self> {
+    fn from_address(ip: Address) -> Option<Self> {
+        let rtype = if ip.address?.addr().is_ipv4() {
+            RType::A
+        } else {
+            RType::AAAA
+        };
         Some(Self {
-            name: address.dns_name?,
-            rtype: address.family.into(),
-            rdata: address.address.addr().to_string(),
+            name: ip.dns_name?,
+            rtype,
+            rdata: ip.address?.addr().to_string(),
         })
     }
 
@@ -150,7 +221,7 @@ impl Rfc1035 {
         )
     }
 
-    fn extract_zone(path: &PathBuf) -> anyhow::Result<Vec<Record>> {
+    fn extract_zone(path: &PathBuf) -> anyhow::Result<Vec<ZoneRecord>> {
         Ok(ZoneParser::new(&File::open(path)?, ".").collect())
     }
 
@@ -167,21 +238,12 @@ impl Rfc1035 {
     // Ok(soa)
     // }
 
-    fn compare_zones(a: &[Rfc1035], b: &[Record]) -> bool {
-        let b: Vec<&Record> = b.iter().filter(|r| r.rrtype != RRType::SOA).collect();
+    fn compare_zones(a: &[Record], b: &[ZoneRecord]) -> bool {
+        let b: Vec<&ZoneRecord> = b.iter().filter(|r| r.rrtype != RRType::SOA).collect();
         if b.is_empty() || a.len() != b.len() {
             return false;
         }
 
         a.iter().zip(b.iter()).filter(|(a, b)| **a == ***b).count() == a.len()
-    }
-}
-
-impl From<Family> for RType {
-    fn from(family: Family) -> Self {
-        match family {
-            Family::IPv4 => Self::A,
-            Family::IPv6 => Self::AAAA,
-        }
     }
 }

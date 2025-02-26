@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 
 use anyhow::Result;
-use data::{ip_address::IpAddress, prefix::Prefix, List};
+use clap::Args;
+use data::{ip_address::IpAddress, prefix::Prefix, tenant::Tenant, List};
 use log::{debug, info};
 use reqwest::{
     blocking::Client,
@@ -9,29 +10,38 @@ use reqwest::{
     Url,
 };
 use serde::de::DeserializeOwned;
+use serde_derive::{Deserialize, Serialize};
 use tldextract::{TldExtractor, TldOption};
 
-use crate::{
-    cli::Cli,
-    netbox::data::{common::BriefSite, tenant::Tenant},
-};
+use super::Provider;
+use crate::data::Address;
 
-pub mod data;
+mod data;
 
-macro_rules! filter {
-    ($cli:expr, $address:expr) => {
-        Netbox::filter_c($cli.as_ref(), |cli| Some(*cli == $address))
-    };
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Args)]
+pub struct Netbox {
+    /// Netbox API endpoint
+    #[arg(long, env("NETBOX_ENDPOINT"))]
+    pub endpoint: String,
+    /// Netbox API token
+    #[arg(long, env("NETBOX_TOKEN"))]
+    pub token: String,
 }
 
-pub struct Netbox {
+impl Provider for Netbox {
+    fn provide(&self) -> Result<Vec<Address>> {
+        NetboxClient::new(self.endpoint.clone(), &self.token)?.fetch_addresses()
+    }
+}
+
+struct NetboxClient {
     client: Client,
     base_address: String,
     tld_extractor: TldExtractor,
 }
 
-impl Netbox {
-    pub fn new(base_address: String, token: &str) -> Result<Self> {
+impl NetboxClient {
+    fn new(base_address: String, token: &str) -> Result<Self> {
         let mut headers = HeaderMap::new();
         let mut auth = HeaderValue::from_str(&format!("Token {token}"))?;
         auth.set_sensitive(true);
@@ -77,10 +87,11 @@ impl Netbox {
         Ok(results)
     }
 
-    pub fn fetch_addresses(&self) -> Result<Vec<IpAddress>> {
+    fn fetch_addresses(&self) -> Result<Vec<Address>> {
         info!("Fetching netbox addresses");
         let addresses: Vec<IpAddress> = self.get_list("/ipam/ip-addresses", None)?;
-        self.populate(addresses)
+        let addresses = self.populate(addresses)?;
+        Ok(addresses.into_iter().map(Into::into).collect())
     }
 
     fn populate(&self, mut addresses: Vec<IpAddress>) -> Result<Vec<IpAddress>> {
@@ -122,37 +133,5 @@ impl Netbox {
         }
 
         Ok(addresses)
-    }
-
-    pub fn filter(&self, cli: &Cli, addresses: Vec<IpAddress>) -> Vec<IpAddress> {
-        info!("Filtering netbox addresses");
-        addresses
-            .into_iter()
-            .filter(|address| {
-                filter!(cli.tenant, address.tenant.as_ref()?.slug)
-                    && filter!(
-                        cli.tenant_group,
-                        address.full_tenant.as_ref()?.group.as_ref()?.slug
-                    )
-                    && filter!(cli.vlan, address.vlan.as_ref()?.vid)
-                    && filter!(cli.status, address.status)
-                    && filter!(cli.domain, *address.domain.as_ref()?)
-                    && filter!(
-                        cli.site,
-                        TryInto::<&BriefSite>::try_into(address.scope.as_ref()?)
-                            .ok()?
-                            .slug
-                    )
-                    && filter!(cli.family, address.family)
-            })
-            .collect()
-    }
-
-    fn filter_c<F, T>(cli: Option<&Vec<T>>, filter: F) -> bool
-    where
-        F: Fn(&T) -> Option<bool>,
-    {
-        let Some(cli) = cli else { return true };
-        cli.iter().any(|f| filter(f).unwrap_or(false))
     }
 }

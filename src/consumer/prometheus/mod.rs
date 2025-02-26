@@ -2,67 +2,123 @@ use std::{
     fmt::Debug,
     fs::File,
     io::{stdout, Write},
+    path::PathBuf,
+    str::FromStr,
 };
 
-use anyhow::Result;
+use anyhow::{anyhow, Error, Result};
+use clap::{builder::PossibleValue, Args, ValueEnum};
 use derive_more::From;
 use log::{debug, info};
 use serde_derive::{Deserialize, Serialize};
 
-use crate::{
-    cli::{Prometheus as Cmd, PrometheusFormat},
-    netbox::data::{ip_address::IpAddress, prefix::Scope},
-};
+use super::Consumer;
+use crate::data::Address;
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Args)]
+pub struct Prometheus {
+    /// Output format
+    #[arg(long, env("PROMETHEUS_FORMAT"), value_enum, default_value_t)]
+    pub format: PrometheusFormat,
+    // Output file
+    #[arg(long, env("PROMETHEUS_OUTPUT"), value_name = "FILE")]
+    pub output: Option<PathBuf>,
+}
+
+impl Consumer for Prometheus {
+    fn consume(&self, addresses: Vec<Address>) -> Result<()> {
+        Data::push(self, addresses)
+    }
+}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Prometheus {
+pub enum PrometheusFormat {
+    Yaml,
+    #[default]
+    Json,
+}
+
+impl FromStr for PrometheusFormat {
+    type Err = Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(match s {
+            "yaml" => PrometheusFormat::Yaml,
+            "json" => PrometheusFormat::Json,
+            _ => return Err(anyhow!("Unexpected format")),
+        })
+    }
+}
+
+impl ValueEnum for PrometheusFormat {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[PrometheusFormat::Yaml, PrometheusFormat::Json]
+    }
+
+    fn to_possible_value(&self) -> Option<PossibleValue> {
+        Some(PossibleValue::new(match self {
+            PrometheusFormat::Yaml => "yaml",
+            PrometheusFormat::Json => "json",
+        }))
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct Data {
     targets: Vec<String>,
     #[serde(with = "tuple_vec_map")]
-    labels: Vec<(String, Data)>,
+    labels: Vec<(String, Target)>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, From)]
 #[serde(untagged)]
-enum Data {
+enum Target {
     String(String),
     Integer(i64),
     #[default]
     Null,
 }
 
-impl TryFrom<IpAddress> for Prometheus {
-    type Error = ();
-    fn try_from(value: IpAddress) -> Result<Self, Self::Error> {
-        let mut labels: Vec<(String, Data)> = Vec::new();
-        labels.push((
-            "__meta_netbox_status".into(),
-            value.status.to_string().into(),
-        ));
-        labels.push(("__meta_netbox_id".into(), value.id.into()));
-        let family: u8 = value.family.into();
-        labels.push(("__meta_netbox_family".into(), i64::from(family).into()));
-        if let Some(tenant) = value.full_tenant {
-            labels.push(("__meta_netbox_tenant".into(), tenant.slug.into()));
-            if let Some(group) = tenant.group {
-                labels.push(("__meta_netbox_tenant_group".into(), group.slug.into()));
-            }
+impl TryFrom<Address> for Data {
+    type Error = Error;
+    fn try_from(ip: Address) -> Result<Self, Self::Error> {
+        let mut labels: Vec<(String, Target)> = Vec::new();
+        if let Some(status) = ip.status {
+            labels.push(("__meta_netbox_status".into(), status.into()));
         }
-        if let Some(Scope::Site(site)) = value.scope {
-            labels.push(("__meta_netbox_site".into(), site.slug.to_string().into()));
+        if let Some(id) = ip.id {
+            labels.push(("__meta_netbox_id".into(), id.into()));
         }
-        if let Some(dns_name) = value.dns_name {
-            labels.push(("__meta_netbox_dns_name".into(), dns_name.to_string().into()));
+        if let Some(family) = ip.family {
+            let family: u8 = family.into();
+            labels.push(("__meta_netbox_family".into(), i64::from(family).into()));
+        }
+        if let Some(tenant) = ip.tenant {
+            labels.push(("__meta_netbox_tenant".into(), tenant.into()));
+        }
+        if let Some(group) = ip.tenant_group {
+            labels.push(("__meta_netbox_tenant_group".into(), group.into()));
+        }
+        if let Some(site) = ip.site {
+            labels.push(("__meta_netbox_site".into(), site.into()));
+        }
+        if let Some(dns_name) = ip.dns_name {
+            labels.push(("__meta_netbox_dns_name".into(), dns_name.into()));
         }
 
         Ok(Self {
-            targets: vec![value.address.addr().to_string()],
+            targets: vec![
+                ip.address
+                    .ok_or(anyhow!("No IP address found"))?
+                    .addr()
+                    .to_string(),
+            ],
             labels,
         })
     }
 }
 
-impl Prometheus {
-    pub fn push(addresses: Vec<IpAddress>, cmd: &Cmd) -> Result<()> {
+impl Data {
+    fn push(config: &Prometheus, addresses: Vec<Address>) -> Result<()> {
         info!("Converting addresses to Prometheus File SD format");
         let configs = addresses
             .into_iter()
@@ -70,7 +126,7 @@ impl Prometheus {
             .collect::<Vec<Self>>();
 
         info!("Printing in Prometheus File SD format");
-        let mut w = if let Some(path) = &cmd.output {
+        let mut w = if let Some(path) = &config.output {
             debug!("Opening file {} for writing", path.display());
             Box::new(File::create(path)?) as Box<dyn Write>
         } else {
@@ -81,7 +137,7 @@ impl Prometheus {
         writeln!(
             w,
             "{}",
-            match cmd.format {
+            match config.format {
                 PrometheusFormat::Yaml => serde_yaml::to_string(&configs)?,
                 PrometheusFormat::Json => serde_json::to_string_pretty(&configs)?,
             }

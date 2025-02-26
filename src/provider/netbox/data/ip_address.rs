@@ -8,11 +8,13 @@ use serde_json::Value;
 
 use super::{
     common::{
-        AssignedObject, BriefTenant, BriefVlan, BriefVrf, CustomFields, Family, Intermediate, Tag,
+        AssignedObject, BriefSite, BriefTenant, BriefVlan, BriefVrf, CustomFields, Family,
+        Intermediate, Tag,
     },
     prefix::Scope,
     tenant::Tenant,
 };
+use crate::data::Address;
 
 #[serde_with::skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -51,6 +53,25 @@ pub struct IpAddress {
     pub domain: Option<String>,
 }
 
+impl From<IpAddress> for Address {
+    fn from(ip: IpAddress) -> Self {
+        Self {
+            address: Some(ip.address),
+            family: ip.family.try_into().ok(),
+            id: Some(ip.id),
+            dns_name: ip.dns_name,
+            domain: ip.domain,
+            tenant: ip.tenant.map(|s| s.slug),
+            tenant_group: ip.full_tenant.and_then(|s| s.group.map(|s| s.slug)),
+            status: Some(ip.status.to_string()),
+            site: ip
+                .scope
+                .and_then(|s| TryInto::<BriefSite>::try_into(s).ok().map(|s| s.slug)),
+            vlan: None,
+        }
+    }
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(try_from = "Intermediate")]
 pub enum Status {
@@ -74,43 +95,6 @@ pub enum Role {
     Hsrp,
     Glbp,
     Carp,
-}
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Domains(pub Vec<Domain>);
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Domain {
-    pub name: String,
-    pub addresses: Vec<IpAddress>,
-}
-
-impl From<Vec<IpAddress>> for Domains {
-    fn from(mut addresses: Vec<IpAddress>) -> Self {
-        let mut domains = Vec::new();
-        let mut domain = Domain::default();
-        addresses.sort_by(|a, b| a.domain.cmp(&b.domain));
-
-        for address in addresses {
-            let Some(domain_i) = &address.domain else {
-                continue;
-            };
-            if &domain.name != domain_i {
-                if !domain.name.is_empty() {
-                    domains.push(domain);
-                }
-                domain = Domain {
-                    name: domain_i.to_string(),
-                    addresses: Vec::new(),
-                };
-            }
-            domain.addresses.push(address);
-        }
-
-        domains.push(domain);
-
-        Self(domains)
-    }
 }
 
 impl FromStr for Status {

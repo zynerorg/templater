@@ -1203,6 +1203,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-inline-default"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "59fb1bedd774187d304179493b0d3c41fbe97b04b14305363f68d2bdf5e47cb9"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "serde-tuple-vec-map"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1408,6 +1419,7 @@ dependencies = [
  "pretty_env_logger",
  "reqwest",
  "serde",
+ "serde-inline-default",
  "serde-tuple-vec-map",
  "serde_derive",
  "serde_json",
