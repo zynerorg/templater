@@ -1,13 +1,13 @@
-use std::str::FromStr;
+use std::{net::IpAddr, str::FromStr};
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Error, Result};
 use clap::Args;
-use ipnet::IpNet;
 use serde_derive::{Deserialize, Serialize};
+use tldextract::TldExtractor;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Address {
-    pub address: Option<IpNet>,
+    pub address: Option<IpAddr>,
     pub family: Option<Family>,
     pub id: Option<i64>,
     pub dns_name: Option<String>,
@@ -23,7 +23,7 @@ pub struct Address {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Args)]
 pub struct AddressFilter {
     #[arg(long, value_delimiter = ',')]
-    pub address: Option<Vec<IpNet>>,
+    pub address: Option<Vec<IpAddr>>,
     #[arg(long, value_delimiter = ',')]
     pub family: Option<Vec<Family>>,
     #[arg(long, value_delimiter = ',')]
@@ -71,7 +71,7 @@ impl From<Family> for u8 {
 
 impl TryFrom<u8> for Family {
     type Error = Error;
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
+    fn try_from(value: u8) -> Result<Self> {
         Ok(match value {
             4 => Self::IPv4,
             6 => Self::IPv6,
@@ -82,7 +82,7 @@ impl TryFrom<u8> for Family {
 
 impl FromStr for Family {
     type Err = Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self> {
         Ok(match s {
             "ipv4" => Self::IPv4,
             "ipv6" => Self::IPv6,
@@ -150,4 +150,20 @@ where
     let Some(a) = a else { return true };
     let Some(b) = b else { return false };
     a.iter().any(|a| a == b)
+}
+
+impl Address {
+    pub fn fetch_domain(&mut self, tld_extractor: &TldExtractor) -> Option<&String> {
+        if self.domain.is_some() {
+            return self.domain.as_ref();
+        }
+
+        let res = tld_extractor.extract((self.dns_name).as_ref()?).ok()?;
+        if let (Some(domain), Some(suffix)) = (res.domain, res.suffix) {
+            self.domain = Some(format!("{domain}.{suffix}"));
+            return self.domain.as_ref();
+        }
+
+        None
+    }
 }

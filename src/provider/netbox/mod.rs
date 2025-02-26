@@ -11,7 +11,6 @@ use reqwest::{
 };
 use serde::de::DeserializeOwned;
 use serde_derive::{Deserialize, Serialize};
-use tldextract::{TldExtractor, TldOption};
 
 use super::Provider;
 use crate::data::Address;
@@ -37,7 +36,6 @@ impl Provider for Netbox {
 struct NetboxClient {
     client: Client,
     base_address: String,
-    tld_extractor: TldExtractor,
 }
 
 impl NetboxClient {
@@ -52,7 +50,6 @@ impl NetboxClient {
         Ok(Self {
             client,
             base_address,
-            tld_extractor: TldOption::default().naive_mode(true).build(),
         })
     }
 
@@ -121,13 +118,6 @@ impl NetboxClient {
             if let Some(tenant) = &address.tenant {
                 if let Some(other) = tenants.iter().find(|t| tenant.id == t.id) {
                     address.full_tenant = Some(other.clone());
-                }
-            }
-
-            if let Some(dns_name) = &address.dns_name {
-                let res = self.tld_extractor.extract(dns_name)?;
-                if let (Some(domain), Some(suffix)) = (res.domain, res.suffix) {
-                    address.domain = Some(format!("{domain}.{suffix}"));
                 }
             }
         }

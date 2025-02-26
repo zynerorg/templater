@@ -23,7 +23,7 @@ pub struct Rfc1035 {
     #[arg(long, env("RFC1035_OUTPUT"))]
     pub output: Option<PathBuf>,
     /// Record TTL
-    #[arg(long, env("RFC1035_TTL"), default_value = "3_600")]
+    #[arg(long, env("RFC1035_TTL"), default_value = "3600")]
     #[serde_inline_default(3_600)]
     pub ttl: usize,
     /// Disable SOA record generation
@@ -45,19 +45,19 @@ pub struct Rfc1035 {
     )]
     pub administrator_email: Option<String>,
     /// Zone refresh time
-    #[arg(long, env("RFC1035_REFRESH"), default_value = "86_400")]
+    #[arg(long, env("RFC1035_REFRESH"), default_value = "86400")]
     #[serde_inline_default(86_400)]
     pub refresh: usize,
     /// Zone retry time
-    #[arg(long, env("RFC1035_RETRY"), default_value = "7_200")]
+    #[arg(long, env("RFC1035_RETRY"), default_value = "7200")]
     #[serde_inline_default(7_200)]
     pub retry: usize,
     // Zone expire time
-    #[arg(long, env("RFC1035_EXPIRE"), default_value = "3_600_000")]
+    #[arg(long, env("RFC1035_EXPIRE"), default_value = "3600000")]
     #[serde_inline_default(3_600_000)]
     pub expire: usize,
     /// Zone minimum TTL
-    #[arg(long, env("RFC1035_MINIMUM"), default_value = "172_800")]
+    #[arg(long, env("RFC1035_MINIMUM"), default_value = "172800")]
     #[serde_inline_default(172_800)]
     pub minimum: usize,
 }
@@ -119,8 +119,8 @@ impl Record {
         addresses.sort_by(|a, b| {
             a.dns_name.cmp(&b.dns_name).then(
                 a.address
-                    .map(|net| net.addr().is_ipv6())
-                    .cmp(&b.address.map(|net| net.addr().is_ipv6())),
+                    .map(|net| net.is_ipv6())
+                    .cmp(&b.address.map(|net| net.is_ipv6())),
             )
         });
         let domains: Domains = addresses.into();
@@ -206,7 +206,7 @@ impl Record {
     }
 
     fn from_address(ip: Address) -> Option<Self> {
-        let rtype = if ip.address?.addr().is_ipv4() {
+        let rtype = if ip.address?.is_ipv4() {
             RType::A
         } else {
             RType::AAAA
@@ -214,7 +214,7 @@ impl Record {
         Some(Self {
             name: ip.dns_name?,
             rtype,
-            rdata: ip.address?.addr().to_string(),
+            rdata: ip.address?.to_string(),
         })
     }
 

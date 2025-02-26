@@ -56,11 +56,10 @@ pub struct IpAddress {
 impl From<IpAddress> for Address {
     fn from(ip: IpAddress) -> Self {
         Self {
-            address: Some(ip.address),
+            address: Some(ip.address.addr()),
             family: ip.family.try_into().ok(),
             id: Some(ip.id),
             dns_name: ip.dns_name,
-            domain: ip.domain,
             tenant: ip.tenant.map(|s| s.slug),
             tenant_group: ip.full_tenant.and_then(|s| s.group.map(|s| s.slug)),
             status: Some(ip.status.to_string()),
@@ -68,6 +67,7 @@ impl From<IpAddress> for Address {
                 .scope
                 .and_then(|s| TryInto::<BriefSite>::try_into(s).ok().map(|s| s.slug)),
             vlan: None,
+            ..Default::default()
         }
     }
 }

@@ -7,11 +7,12 @@ use std::{
 use anyhow::{Error, Result};
 use clap::Subcommand;
 use serde_derive::{Deserialize, Serialize};
+use tldextract::TldOption;
 
 use crate::{
     consumer::{prometheus::Prometheus, rfc1035::Rfc1035, Consumer as ConsumerTrait},
     data::{Address, AddressFilter},
-    provider::{netbox::Netbox, Provider as ProviderTrait},
+    provider::{netbox::Netbox, yaml::Yaml, Provider as ProviderTrait},
 };
 
 pub mod cli;
@@ -57,6 +58,7 @@ impl ProviderTrait for Provider {
     fn provide(&self) -> Result<Vec<Address>> {
         match &self.config {
             ProviderConfig::Netbox(n) => n.provide(),
+            ProviderConfig::Yaml(n) => n.provide(),
             ProviderConfig::Null => Ok(Vec::new()),
         }
     }
@@ -66,6 +68,7 @@ impl ProviderTrait for Provider {
 #[serde(tag = "type")]
 enum ProviderConfig {
     Netbox(Netbox),
+    Yaml(Yaml),
     #[default]
     Null,
 }
@@ -97,12 +100,13 @@ enum ConsumerConfig {
 
 impl Config {
     pub fn execute(&self) -> Result<()> {
+        let tld_extractor = TldOption::default().naive_mode(false).build();
         let mut addresses: Vec<Address> = self
             .providers
             .iter()
             .map(|provider| {
                 provider.provide().map(|addresses| {
-                    let addresses: Vec<Address> = addresses
+                    let mut addresses: Vec<Address> = addresses
                         .into_iter()
                         .filter(|address| {
                             provider
@@ -111,6 +115,9 @@ impl Config {
                                 .is_none_or(|filter| *filter == *address)
                         })
                         .collect();
+                    for addr in &mut addresses {
+                        addr.fetch_domain(&tld_extractor);
+                    }
                     addresses
                 })
             })

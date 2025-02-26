@@ -109,7 +109,6 @@ impl TryFrom<Address> for Data {
             targets: vec![
                 ip.address
                     .ok_or(anyhow!("No IP address found"))?
-                    .addr()
                     .to_string(),
             ],
             labels,
@@ -122,8 +121,8 @@ impl Data {
         info!("Converting addresses to Prometheus File SD format");
         addresses.sort_by(|a, b| {
             a.address
-                .map(|net| net.addr().is_ipv6())
-                .cmp(&b.address.map(|net| net.addr().is_ipv6()))
+                .map(|net| net.is_ipv6())
+                .cmp(&b.address.map(|net| net.is_ipv6()))
                 .then(a.address.cmp(&b.address))
         });
         let configs = addresses
