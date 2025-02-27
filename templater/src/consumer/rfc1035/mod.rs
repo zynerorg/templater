@@ -15,7 +15,7 @@ use serde_inline_default::serde_inline_default;
 use zoneparser::{RRType, Record as ZoneRecord, ZoneParser};
 
 use super::Consumer;
-use crate::data::{Address, Domains};
+use crate::data::{AddressMain, Domains};
 
 #[serde_inline_default]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Args)]
@@ -80,7 +80,7 @@ impl Default for Rfc1035 {
 }
 
 impl Consumer for Rfc1035 {
-    fn consume(&self, addresses: Vec<Address>) -> anyhow::Result<()> {
+    fn consume(&self, addresses: Vec<AddressMain>) -> anyhow::Result<()> {
         Record::push(self, addresses)
     }
 }
@@ -124,7 +124,7 @@ impl From<IpAddr> for RType {
 }
 
 impl Record {
-    fn push(config: &Rfc1035, mut addresses: Vec<Address>) -> anyhow::Result<()> {
+    fn push(config: &Rfc1035, mut addresses: Vec<AddressMain>) -> anyhow::Result<()> {
         addresses.sort_by(|a, b| {
             a.dns_name.cmp(&b.dns_name).then(
                 a.address
@@ -216,7 +216,7 @@ impl Record {
         Ok(())
     }
 
-    fn from_address(ip: Address) -> Option<Vec<Self>> {
+    fn from_address(ip: AddressMain) -> Option<Vec<Self>> {
         let mut records = Vec::new();
         if let Some(address) = ip.address {
             records.push(Self {

@@ -4,7 +4,7 @@ use anyhow::{anyhow, Error};
 use clap::Args;
 use serde_derive::{Deserialize, Serialize};
 
-use crate::{data::Address, provider::Provider};
+use crate::{data::AddressMain, provider::Provider};
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Args)]
 pub struct Yaml {
@@ -14,13 +14,13 @@ pub struct Yaml {
 }
 
 impl Provider for Yaml {
-    fn provide(self) -> anyhow::Result<Vec<Address>> {
+    fn provide(self) -> anyhow::Result<Vec<AddressMain>> {
         Ok(self.data.into_iter().map(|s| s.0).collect())
     }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-struct Data(Address);
+struct Data(AddressMain);
 
 impl FromStr for Data {
     type Err = Error;
@@ -32,7 +32,7 @@ impl FromStr for Data {
             .parse()?;
         let dns_name = data.collect::<Vec<&str>>().join("=");
 
-        Ok(Self(Address {
+        Ok(Self(AddressMain {
             address: Some(address),
             dns_name: Some(dns_name),
             ..Default::default()

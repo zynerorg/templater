@@ -13,7 +13,7 @@ use serde::de::DeserializeOwned;
 use serde_derive::{Deserialize, Serialize};
 
 use super::Provider;
-use crate::data::Address;
+use crate::data::AddressMain;
 
 mod data;
 
@@ -28,7 +28,7 @@ pub struct Netbox {
 }
 
 impl Provider for Netbox {
-    fn provide(self) -> Result<Vec<Address>> {
+    fn provide(self) -> Result<Vec<AddressMain>> {
         NetboxClient::new(self.endpoint, &self.token)?.fetch_addresses()
     }
 }
@@ -84,7 +84,7 @@ impl NetboxClient {
         Ok(results)
     }
 
-    fn fetch_addresses(&self) -> Result<Vec<Address>> {
+    fn fetch_addresses(&self) -> Result<Vec<AddressMain>> {
         info!("Fetching netbox addresses");
         let addresses: Vec<IpAddress> = self.get_list("/ipam/ip-addresses", None)?;
         let addresses = self.populate(addresses)?;

@@ -11,7 +11,7 @@ use tldextract::TldOption;
 
 use crate::{
     consumer::{prometheus::Prometheus, rfc1035::Rfc1035, Consumer as ConsumerTrait},
-    data::{Address, AddressFilter},
+    data::{AddressFilter, AddressMain},
     provider::{netbox::Netbox, yaml::Yaml, Provider as ProviderTrait},
 };
 
@@ -55,7 +55,7 @@ struct Provider {
 }
 
 impl ProviderTrait for Provider {
-    fn provide(self) -> Result<Vec<Address>> {
+    fn provide(self) -> Result<Vec<AddressMain>> {
         let tld_extractor = TldOption::default()
             .naive_mode(
                 true, // Required because it does not like the internal TLD, will break domains like co.uk
@@ -68,7 +68,7 @@ impl ProviderTrait for Provider {
             ProviderConfig::Null => Ok(Vec::new()),
         }
         .map(|addresses| {
-            let mut addresses: Vec<Address> = addresses
+            let mut addresses: Vec<AddressMain> = addresses
                 .into_iter()
                 .filter(|address| self.filter.as_ref().is_none_or(|filter| filter == address))
                 .collect();
@@ -96,7 +96,7 @@ struct Consumer {
 }
 
 impl ConsumerTrait for Consumer {
-    fn consume(&self, addresses: Vec<Address>) -> Result<()> {
+    fn consume(&self, addresses: Vec<AddressMain>) -> Result<()> {
         match &self.config {
             ConsumerConfig::Prometheus(n) => n.consume(addresses),
             ConsumerConfig::Rfc1035(n) => n.consume(addresses),
@@ -116,12 +116,12 @@ enum ConsumerConfig {
 
 impl Config {
     pub fn execute(self) -> Result<()> {
-        let addresses: Result<Vec<Vec<Address>>> = self
+        let addresses: Result<Vec<Vec<AddressMain>>> = self
             .providers
             .into_iter()
             .map(|provider| provider.provide())
             .collect();
-        let mut addresses: Vec<Address> = addresses?.into_iter().flatten().collect();
+        let mut addresses: Vec<AddressMain> = addresses?.into_iter().flatten().collect();
 
         if let Some(filter) = &self.filter {
             addresses.retain(|address| filter == address);

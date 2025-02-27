@@ -1,48 +1,25 @@
 use std::{net::IpAddr, str::FromStr};
 
 use anyhow::{anyhow, Error, Result};
-use clap::Args;
 use serde_derive::{Deserialize, Serialize};
+use templater_macro::Filter;
 use tldextract::TldExtractor;
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Filter)]
+#[allow(dead_code)]
 pub struct Address {
-    pub address: Option<IpAddr>,
-    pub family: Option<Family>,
-    pub id: Option<i64>,
-    pub dns_name: Option<String>,
-    pub domain: Option<String>,
-    pub tenant: Option<String>,
-    pub tenant_group: Option<String>,
-    pub status: Option<String>,
-    pub site: Option<String>,
-    pub vlan: Option<u16>,
-    pub alias: Option<Vec<String>>,
-}
-
-// There must be a better way than to dupe this, macro maybe?
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Args)]
-pub struct AddressFilter {
-    #[arg(long, value_delimiter = ',')]
-    pub address: Option<Vec<IpAddr>>,
-    #[arg(long, value_delimiter = ',')]
-    pub family: Option<Vec<Family>>,
-    #[arg(long, value_delimiter = ',')]
-    pub id: Option<Vec<i64>>,
-    #[arg(long, value_delimiter = ',')]
-    pub dns_name: Option<Vec<String>>,
-    #[arg(long, value_delimiter = ',')]
-    pub domain: Option<Vec<String>>,
-    #[arg(long, value_delimiter = ',')]
-    pub tenant: Option<Vec<String>>,
-    #[arg(long, value_delimiter = ',')]
-    pub tenant_group: Option<Vec<String>>,
-    #[arg(long, value_delimiter = ',')]
-    pub status: Option<Vec<String>>,
-    #[arg(long, value_delimiter = ',')]
-    pub site: Option<Vec<String>>,
-    #[arg(long, value_delimiter = ',')]
-    pub vlan: Option<Vec<u16>>,
+    pub address: IpAddr,
+    pub family: Family,
+    pub id: i64,
+    pub dns_name: String,
+    pub domain: String,
+    pub tenant: String,
+    pub tenant_group: String,
+    pub status: String,
+    pub site: String,
+    pub vlan: u16,
+    #[filter(skip)]
+    pub alias: Vec<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -51,7 +28,7 @@ pub struct Domains(pub Vec<Domain>);
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Domain {
     pub name: String,
-    pub addresses: Vec<Address>,
+    pub addresses: Vec<AddressMain>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -92,8 +69,8 @@ impl FromStr for Family {
     }
 }
 
-impl From<Vec<Address>> for Domains {
-    fn from(mut addresses: Vec<Address>) -> Self {
+impl From<Vec<AddressMain>> for Domains {
+    fn from(mut addresses: Vec<AddressMain>) -> Self {
         let mut domains = Vec::new();
         let mut domain = Domain::default();
         addresses.sort_by(|a, b| a.domain.cmp(&b.domain));
@@ -126,8 +103,8 @@ macro_rules! check {
     };
 }
 
-impl PartialEq<Address> for AddressFilter {
-    fn eq(&self, other: &Address) -> bool {
+impl PartialEq<AddressMain> for AddressFilter {
+    fn eq(&self, other: &AddressMain) -> bool {
         check!(
             self,
             other,
@@ -153,7 +130,7 @@ where
     a.iter().any(|a| a == b)
 }
 
-impl Address {
+impl AddressMain {
     pub fn fetch_domain(&mut self, tld_extractor: &TldExtractor) -> Option<&String> {
         if self.domain.is_some() {
             return self.domain.as_ref();

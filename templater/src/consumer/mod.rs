@@ -1,8 +1,8 @@
-use crate::data::Address;
+use crate::data::AddressMain;
 
 pub mod prometheus;
 pub mod rfc1035;
 
 pub trait Consumer {
-    fn consume(&self, addresses: Vec<Address>) -> anyhow::Result<()>;
+    fn consume(&self, addresses: Vec<AddressMain>) -> anyhow::Result<()>;
 }

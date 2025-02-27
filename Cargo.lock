@@ -1418,8 +1418,18 @@ dependencies = [
  "serde_json",
  "serde_with",
  "serde_yaml",
+ "templater_macro",
  "tldextract",
  "zoneparser",
+]
+
+[[package]]
+name = "templater_macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

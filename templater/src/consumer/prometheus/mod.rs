@@ -13,7 +13,7 @@ use log::{debug, info};
 use serde_derive::{Deserialize, Serialize};
 
 use super::Consumer;
-use crate::data::Address;
+use crate::data::AddressMain;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Args)]
 pub struct Prometheus {
@@ -26,7 +26,7 @@ pub struct Prometheus {
 }
 
 impl Consumer for Prometheus {
-    fn consume(&self, addresses: Vec<Address>) -> Result<()> {
+    fn consume(&self, addresses: Vec<AddressMain>) -> Result<()> {
         Data::push(self, addresses)
     }
 }
@@ -78,9 +78,9 @@ enum Target {
     Null,
 }
 
-impl TryFrom<Address> for Data {
+impl TryFrom<AddressMain> for Data {
     type Error = Error;
-    fn try_from(ip: Address) -> Result<Self, Self::Error> {
+    fn try_from(ip: AddressMain) -> Result<Self, Self::Error> {
         let mut labels: Vec<(String, Target)> = Vec::new();
         if let Some(status) = ip.status {
             labels.push(("__meta_netbox_status".into(), status.into()));
@@ -117,7 +117,7 @@ impl TryFrom<Address> for Data {
 }
 
 impl Data {
-    fn push(config: &Prometheus, mut addresses: Vec<Address>) -> Result<()> {
+    fn push(config: &Prometheus, mut addresses: Vec<AddressMain>) -> Result<()> {
         info!("Converting addresses to Prometheus File SD format");
         addresses.sort_by(|a, b| {
             a.address

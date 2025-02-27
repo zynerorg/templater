@@ -13,7 +13,7 @@ use super::{
     prefix::Scope,
     tenant::Tenant,
 };
-use crate::data::Address;
+use crate::data::AddressMain;
 
 #[serde_with::skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -52,7 +52,7 @@ pub struct IpAddress {
     pub domain: Option<String>,
 }
 
-impl From<IpAddress> for Address {
+impl From<IpAddress> for AddressMain {
     fn from(ip: IpAddress) -> Self {
         Self {
             address: Some(ip.address.addr()),
