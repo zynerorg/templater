@@ -1,0 +1,17 @@
+[graph]
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "x86_64-unknown-linux-musl",
+]
+
+[licenses]
+allow = [
+    "GPL-3.0",
+    "MIT",
+    "Unicode-3.0",
+    "MPL-2.0",
+    "ISC",
+    "Apache-2.0",
+    "BSD-3-Clause",
+]
+confidence-threshold = 0.8
