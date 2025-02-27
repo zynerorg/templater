@@ -97,36 +97,16 @@ impl From<Vec<AddressMain>> for Domains {
     }
 }
 
-macro_rules! check {
-    ($a:expr, $b:expr, $($field:ident),+) => {
-        $(check($a.$field.as_ref(), $b.$field.as_ref())) &&+
-    };
-}
-
-impl PartialEq<AddressMain> for AddressFilter {
-    fn eq(&self, other: &AddressMain) -> bool {
-        check!(
-            self,
-            other,
-            id,
-            tenant,
-            tenant_group,
-            vlan,
-            status,
-            domain,
-            site,
-            family,
-            dns_name
-        )
-    }
-}
-
-fn check<T>(a: Option<&Vec<T>>, b: Option<&T>) -> bool
+fn check<T>(a: Option<&Vec<T>>, b: Option<&T>, default: bool) -> bool
 where
     T: PartialEq,
 {
-    let Some(a) = a else { return true };
-    let Some(b) = b else { return false };
+    let Some(a) = a else {
+        return default;
+    };
+    let Some(b) = b else {
+        return !default;
+    };
     a.iter().any(|a| a == b)
 }
 
