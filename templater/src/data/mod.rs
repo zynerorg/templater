@@ -1,6 +1,8 @@
-use std::{net::IpAddr, str::FromStr};
+use std::{fmt::Debug, net::IpAddr, str::FromStr};
 
 use anyhow::{anyhow, Error, Result};
+use clap::{error::ErrorKind, ArgMatches, Args, Command, FromArgMatches};
+use derive_more::From;
 use serde_derive::{Deserialize, Serialize};
 use templater_macro::Filter;
 use tldextract::TldExtractor;
@@ -20,6 +22,8 @@ pub struct Address {
     pub vlan: u16,
     #[filter(skip)]
     pub alias: Vec<String>,
+    #[filter(vec)]
+    pub tags: Vec<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -110,6 +114,19 @@ where
     a.iter().any(|a| a == b)
 }
 
+fn check_vec<T>(a: Option<&Vec<T>>, b: Option<&Vec<T>>, default: bool) -> bool
+where
+    T: PartialEq + Debug,
+{
+    let Some(a) = a else {
+        return default;
+    };
+    let Some(b) = b else {
+        return !default;
+    };
+    a.iter().any(|a| b.iter().any(|b| a == b))
+}
+
 impl AddressMain {
     pub fn fetch_domain(&mut self, tld_extractor: &TldExtractor) -> Option<&String> {
         if self.domain.is_some() {
@@ -123,5 +140,34 @@ impl AddressMain {
         }
 
         None
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, From)]
+#[serde(deny_unknown_fields)]
+pub struct VecAddressFilter(pub Vec<AddressFilter>);
+
+impl FromArgMatches for VecAddressFilter {
+    fn from_arg_matches(matches: &ArgMatches) -> std::result::Result<Self, clap::Error> {
+        Ok(vec![AddressFilter::from_arg_matches(matches)?].into())
+    }
+    fn update_from_arg_matches(
+        &mut self,
+        matches: &ArgMatches,
+    ) -> std::result::Result<(), clap::Error> {
+        self.0
+            .get_mut(0)
+            .ok_or(clap::Error::new(ErrorKind::InvalidValue))?
+            .update_from_arg_matches(matches)
+    }
+}
+
+impl Args for VecAddressFilter {
+    fn augment_args(cmd: Command) -> Command {
+        AddressFilter::augment_args(cmd)
+    }
+
+    fn augment_args_for_update(cmd: Command) -> Command {
+        AddressFilter::augment_args_for_update(cmd)
     }
 }

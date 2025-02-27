@@ -11,17 +11,18 @@ use tldextract::TldOption;
 
 use crate::{
     consumer::{prometheus::Prometheus, rfc1035::Rfc1035, Consumer as ConsumerTrait},
-    data::{AddressFilter, AddressMain},
+    data::{AddressMain, VecAddressFilter},
     provider::{netbox::Netbox, yaml::Yaml, Provider as ProviderTrait},
 };
 
 pub mod cli;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     providers: Vec<Provider>,
     consumers: Vec<Consumer>,
-    filter: Option<AddressFilter>,
+    filters: Option<VecAddressFilter>,
 }
 
 impl Add for Config {
@@ -37,7 +38,7 @@ impl AddAssign for Config {
     fn add_assign(&mut self, rhs: Self) {
         self.providers.extend(rhs.providers);
         self.consumers.extend(rhs.consumers);
-        self.filter = rhs.filter;
+        self.filters = rhs.filters;
     }
 }
 
@@ -49,9 +50,10 @@ impl Config {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Provider {
     config: ProviderConfig,
-    filter: Option<AddressFilter>,
+    filters: Option<VecAddressFilter>,
 }
 
 impl ProviderTrait for Provider {
@@ -70,7 +72,11 @@ impl ProviderTrait for Provider {
         .map(|addresses| {
             let mut addresses: Vec<AddressMain> = addresses
                 .into_iter()
-                .filter(|address| self.filter.as_ref().is_none_or(|filter| filter == address))
+                .filter(|address| {
+                    self.filters
+                        .as_ref()
+                        .is_none_or(|filters| filters.0.iter().any(|f| f == address))
+                })
                 .collect();
             for address in &mut addresses {
                 address.fetch_domain(&tld_extractor);
@@ -81,7 +87,7 @@ impl ProviderTrait for Provider {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Subcommand)]
-#[serde(tag = "type")]
+#[serde(deny_unknown_fields, tag = "type")]
 enum ProviderConfig {
     Netbox(Netbox),
     Yaml(Yaml),
@@ -90,9 +96,10 @@ enum ProviderConfig {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Consumer {
     config: ConsumerConfig,
-    filter: Option<AddressFilter>,
+    filters: Option<VecAddressFilter>,
 }
 
 impl ConsumerTrait for Consumer {
@@ -106,7 +113,7 @@ impl ConsumerTrait for Consumer {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Subcommand)]
-#[serde(tag = "type")]
+#[serde(deny_unknown_fields, tag = "type")]
 enum ConsumerConfig {
     Rfc1035(Rfc1035),
     Prometheus(Prometheus),
@@ -120,14 +127,14 @@ impl Config {
             self.providers.into_iter().map(Provider::provide).collect();
         let mut addresses: Vec<AddressMain> = addresses?.into_iter().flatten().collect();
 
-        if let Some(filter) = &self.filter {
-            addresses.retain(|address| filter == address);
+        if let Some(filters) = &self.filters {
+            addresses.retain(|address| filters.0.iter().any(|f| f == address));
         }
 
         for consumer in self.consumers {
             let mut addresses = addresses.clone();
-            if let Some(filter) = &consumer.filter {
-                addresses.retain(|address| filter == address);
+            if let Some(filters) = &consumer.filters {
+                addresses.retain(|address| filters.0.iter().any(|f| f == address));
             }
 
             consumer.consume(addresses)?;

@@ -19,6 +19,7 @@ use crate::data::{AddressMain, Domains};
 
 #[serde_inline_default]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Args)]
+#[serde(deny_unknown_fields)]
 pub struct Rfc1035 {
     /// Zonefile output directory
     #[arg(long, env("RFC1035_OUTPUT"))]

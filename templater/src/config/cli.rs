@@ -4,7 +4,7 @@ use anyhow::{anyhow, Error, Result};
 use clap::{Args, FromArgMatches, Parser, Subcommand};
 
 use super::{Config as ConfigI, Consumer, ConsumerConfig, Provider, ProviderConfig};
-use crate::data::AddressFilter;
+use crate::data::VecAddressFilter;
 
 #[derive(Debug, Clone, Parser)]
 pub struct Cli {
@@ -38,13 +38,13 @@ impl Cli {
             let mut config: ConfigI = c.try_into()?;
             if let Some(peek) = cli.peek() {
                 if matches!(peek.mode, Mode::Filter(_)) {
-                    if let Mode::Filter(filter) = cli.next().unwrap().mode {
-                        let mut filter = Some(filter);
+                    if let Mode::Filter(filters) = cli.next().unwrap().mode {
+                        let mut filters = Some(filters);
                         if let Some(f) = config.providers.get_mut(0) {
-                            f.filter = filter.take();
+                            f.filters = filters.take();
                         }
                         if let Some(f) = config.consumers.get_mut(0) {
-                            f.filter = filter.take();
+                            f.filters = filters.take();
                         }
                     }
                 }
@@ -60,8 +60,8 @@ enum Mode {
     Config(Config),
     Provider(Shim<ProviderConfig>),
     Consumer(Shim<ConsumerConfig>),
-    Filter(AddressFilter),
-    GlobalFilter(AddressFilter),
+    Filter(VecAddressFilter),
+    GlobalFilter(VecAddressFilter),
 }
 
 #[derive(Debug, Clone, Args)]
@@ -92,7 +92,7 @@ impl TryFrom<Cli> for ConfigI {
                 config: consumer.a,
                 ..Default::default()
             }),
-            Mode::GlobalFilter(filter) => config.filter = Some(filter),
+            Mode::GlobalFilter(filter) => config.filters = Some(filter),
             Mode::Filter(_) => {}
         }
 

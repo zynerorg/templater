@@ -70,6 +70,7 @@ impl From<IpAddress> for AddressMain {
                 .custom_fields
                 .alias
                 .map(|s| s.lines().map(|s| s.trim().to_string()).collect()),
+            tags: Some(ip.tags.into_iter().map(|tag| tag.slug).collect()),
             ..Default::default()
         }
     }

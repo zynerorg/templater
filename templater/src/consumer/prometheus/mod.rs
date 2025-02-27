@@ -16,6 +16,7 @@ use super::Consumer;
 use crate::data::AddressMain;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Args)]
+#[serde(deny_unknown_fields)]
 pub struct Prometheus {
     /// Output format
     #[arg(long, env("PROMETHEUS_FORMAT"), value_enum, default_value_t)]

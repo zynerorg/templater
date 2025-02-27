@@ -7,6 +7,7 @@ use serde_derive::{Deserialize, Serialize};
 use crate::{data::AddressMain, provider::Provider};
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Args)]
+#[serde(deny_unknown_fields)]
 pub struct Yaml {
     /// List of addresses
     #[arg(env("YAML_ADDRESS"), value_delimiter = ',')]

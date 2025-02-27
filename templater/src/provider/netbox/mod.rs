@@ -18,6 +18,7 @@ use crate::data::AddressMain;
 mod data;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Args)]
+#[serde(deny_unknown_fields)]
 pub struct Netbox {
     /// Netbox API endpoint
     #[arg(long, env("NETBOX_ENDPOINT"))]
