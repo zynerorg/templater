@@ -38,8 +38,8 @@ pub struct Domain {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Location {
-    pub longitude: f64,
     pub latitude: f64,
+    pub longitude: f64,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
