@@ -13,7 +13,7 @@ use log::{debug, info};
 use serde_derive::{Deserialize, Serialize};
 
 use super::Consumer;
-use crate::data::AddressMain;
+use crate::data::{AddressMain, Family};
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Args)]
 #[serde(deny_unknown_fields)]
@@ -79,32 +79,31 @@ enum Target {
     Null,
 }
 
+macro_rules! gen_label {
+    ($ip:expr, $labels:expr, $($name:ident),+) => {
+        ($(
+            if let Some(value) = $ip.$name {
+                $labels.push((format!("__meta_netbox_{}", stringify!($name)), value.into()));
+            }
+        ),+)
+    };
+}
+
 impl TryFrom<AddressMain> for Data {
     type Error = Error;
     fn try_from(ip: AddressMain) -> Result<Self, Self::Error> {
         let mut labels: Vec<(String, Target)> = Vec::new();
-        if let Some(status) = ip.status {
-            labels.push(("__meta_netbox_status".into(), status.into()));
-        }
-        if let Some(id) = ip.id {
-            labels.push(("__meta_netbox_id".into(), id.into()));
-        }
-        if let Some(family) = ip.family {
-            let family: u8 = family.into();
-            labels.push(("__meta_netbox_family".into(), i64::from(family).into()));
-        }
-        if let Some(tenant) = ip.tenant {
-            labels.push(("__meta_netbox_tenant".into(), tenant.into()));
-        }
-        if let Some(group) = ip.tenant_group {
-            labels.push(("__meta_netbox_tenant_group".into(), group.into()));
-        }
-        if let Some(site) = ip.site {
-            labels.push(("__meta_netbox_site".into(), site.into()));
-        }
-        if let Some(dns_name) = ip.dns_name {
-            labels.push(("__meta_netbox_dns_name".into(), dns_name.into()));
-        }
+        gen_label!(
+            ip,
+            labels,
+            status,
+            id,
+            family,
+            tenant,
+            tenant_group,
+            site,
+            dns_name
+        );
 
         Ok(Self {
             targets: vec![
@@ -114,6 +113,13 @@ impl TryFrom<AddressMain> for Data {
             ],
             labels,
         })
+    }
+}
+
+impl From<Family> for Target {
+    fn from(family: Family) -> Self {
+        let family: u8 = family.into();
+        i64::from(family).into()
     }
 }
 
