@@ -83,7 +83,7 @@ impl FromStr for Family {
 impl FromStr for Location {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, anyhow::Error> {
-        let coords: Result<Vec<f64>, ParseFloatError> = s.split(',').map(|f| f.parse()).collect();
+        let coords: Result<Vec<f64>, ParseFloatError> = s.split(',').map(str::parse).collect();
         let mut coords = coords?;
         Ok(Self {
             longitude: coords.pop().ok_or(anyhow!("Failed to parse longitude"))?,
