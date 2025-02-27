@@ -116,11 +116,8 @@ enum ConsumerConfig {
 
 impl Config {
     pub fn execute(self) -> Result<()> {
-        let addresses: Result<Vec<Vec<AddressMain>>> = self
-            .providers
-            .into_iter()
-            .map(|provider| provider.provide())
-            .collect();
+        let addresses: Result<Vec<Vec<AddressMain>>> =
+            self.providers.into_iter().map(Provider::provide).collect();
         let mut addresses: Vec<AddressMain> = addresses?.into_iter().flatten().collect();
 
         if let Some(filter) = &self.filter {
@@ -130,7 +127,7 @@ impl Config {
         for consumer in self.consumers {
             let mut addresses = addresses.clone();
             if let Some(filter) = &consumer.filter {
-                addresses.retain(|address| filter == address)
+                addresses.retain(|address| filter == address);
             }
 
             consumer.consume(addresses)?;

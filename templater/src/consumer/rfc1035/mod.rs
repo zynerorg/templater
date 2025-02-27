@@ -231,7 +231,7 @@ impl Record {
                     name: alias,
                     rtype: RType::CNAME,
                     rdata: ip.dns_name.as_ref()?.to_owned(),
-                })
+                });
             }
         }
 
