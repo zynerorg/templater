@@ -28,8 +28,8 @@ pub struct Netbox {
 }
 
 impl Provider for Netbox {
-    fn provide(&self) -> Result<Vec<Address>> {
-        NetboxClient::new(self.endpoint.clone(), &self.token)?.fetch_addresses()
+    fn provide(self) -> Result<Vec<Address>> {
+        NetboxClient::new(self.endpoint, &self.token)?.fetch_addresses()
     }
 }
 

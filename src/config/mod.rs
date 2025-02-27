@@ -4,7 +4,7 @@ use std::{
     path::PathBuf,
 };
 
-use anyhow::{Error, Result};
+use anyhow::Result;
 use clap::Subcommand;
 use serde_derive::{Deserialize, Serialize};
 use tldextract::TldOption;
@@ -55,12 +55,28 @@ struct Provider {
 }
 
 impl ProviderTrait for Provider {
-    fn provide(&self) -> Result<Vec<Address>> {
-        match &self.config {
+    fn provide(self) -> Result<Vec<Address>> {
+        let tld_extractor = TldOption::default()
+            .naive_mode(
+                true, // Required because it does not like the internal TLD, will break domains like co.uk
+            )
+            .build();
+
+        match self.config {
             ProviderConfig::Netbox(n) => n.provide(),
             ProviderConfig::Yaml(n) => n.provide(),
             ProviderConfig::Null => Ok(Vec::new()),
         }
+        .map(|addresses| {
+            let mut addresses: Vec<Address> = addresses
+                .into_iter()
+                .filter(|address| self.filter.as_ref().is_none_or(|filter| filter == address))
+                .collect();
+            for address in &mut addresses {
+                address.fetch_domain(&tld_extractor);
+            }
+            addresses
+        })
     }
 }
 
@@ -99,45 +115,22 @@ enum ConsumerConfig {
 }
 
 impl Config {
-    pub fn execute(&self) -> Result<()> {
-        let tld_extractor = TldOption::default()
-            .naive_mode(
-                true, // Required because it does not like the internal TLD, will break domains like co.uk
-            )
-            .build();
-        let mut addresses: Vec<Address> = self
+    pub fn execute(self) -> Result<()> {
+        let addresses: Result<Vec<Vec<Address>>> = self
             .providers
-            .iter()
-            .map(|provider| {
-                provider.provide().map(|addresses| {
-                    let mut addresses: Vec<Address> = addresses
-                        .into_iter()
-                        .filter(|address| {
-                            provider
-                                .filter
-                                .as_ref()
-                                .is_none_or(|filter| *filter == *address)
-                        })
-                        .collect();
-                    for addr in &mut addresses {
-                        addr.fetch_domain(&tld_extractor);
-                    }
-                    addresses
-                })
-            })
-            .try_fold(Vec::new(), |mut a, b| {
-                a.extend(b?);
-                Ok::<Vec<Address>, Error>(a)
-            })?;
+            .into_iter()
+            .map(|provider| provider.provide())
+            .collect();
+        let mut addresses: Vec<Address> = addresses?.into_iter().flatten().collect();
 
         if let Some(filter) = &self.filter {
             addresses.retain(|address| filter == address);
         }
 
-        for consumer in &self.consumers {
+        for consumer in self.consumers {
             let mut addresses = addresses.clone();
             if let Some(filter) = &consumer.filter {
-                addresses.retain(|address| filter == address);
+                addresses.retain(|address| filter == address)
             }
 
             consumer.consume(addresses)?;

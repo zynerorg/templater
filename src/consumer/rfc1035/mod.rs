@@ -176,14 +176,14 @@ impl Record {
 
             let width = records.iter().fold(usize::MIN, |a, b| a.max(b.name.len()));
 
-            debug!("Writing SOA record to zone {}", domain.name);
-            Self::write_soa(&mut w, config, width, domain.name.clone())?;
-
             info!("Writing records to zone {}", domain.name);
+            debug!("Writing SOA record");
+            Self::write_soa(&mut w, config, width, domain.name)?;
+            debug!("Writing regular records");
             for record in records {
                 writeln!(w, "{}", record.format(width))?;
             }
-            info!("Finished writing domain {}", domain.name);
+            info!("Finished writing records");
         }
 
         Ok(())

@@ -14,8 +14,8 @@ pub struct Yaml {
 }
 
 impl Provider for Yaml {
-    fn provide(&self) -> anyhow::Result<Vec<Address>> {
-        Ok(self.data.clone().into_iter().map(|s| s.0).collect())
+    fn provide(self) -> anyhow::Result<Vec<Address>> {
+        Ok(self.data.into_iter().map(|s| s.0).collect())
     }
 }
 
