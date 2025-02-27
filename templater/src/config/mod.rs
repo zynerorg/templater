@@ -10,9 +10,9 @@ use serde_derive::{Deserialize, Serialize};
 use tldextract::TldOption;
 
 use crate::{
-    consumer::{prometheus::Prometheus, rfc1035::Rfc1035, Consumer as ConsumerTrait},
+    consumer::{Consumer as ConsumerTrait, prometheus::Prometheus, rfc1035::Rfc1035},
     data::{AddressMain, VecAddressFilter},
-    provider::{netbox::Netbox, yaml::Yaml, Provider as ProviderTrait},
+    provider::{Provider as ProviderTrait, netbox::Netbox, yaml::Yaml},
 };
 
 pub mod cli;
@@ -46,6 +46,27 @@ impl Config {
     pub fn parse(path: PathBuf) -> Result<Self> {
         let file = File::open(path)?;
         Ok(serde_yaml::from_reader(file)?)
+    }
+
+    pub fn execute(self) -> Result<()> {
+        let addresses: Result<Vec<Vec<AddressMain>>> =
+            self.providers.into_iter().map(Provider::provide).collect();
+        let mut addresses: Vec<AddressMain> = addresses?.into_iter().flatten().collect();
+
+        if let Some(filters) = &self.filters {
+            addresses.retain(|address| filters.0.iter().any(|f| f == address));
+        }
+
+        for consumer in self.consumers {
+            let mut addresses = addresses.clone();
+            if let Some(filters) = &consumer.filters {
+                addresses.retain(|address| filters.0.iter().any(|f| f == address));
+            }
+
+            consumer.consume(addresses)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -119,27 +140,4 @@ enum ConsumerConfig {
     Prometheus(Prometheus),
     #[default]
     Null,
-}
-
-impl Config {
-    pub fn execute(self) -> Result<()> {
-        let addresses: Result<Vec<Vec<AddressMain>>> =
-            self.providers.into_iter().map(Provider::provide).collect();
-        let mut addresses: Vec<AddressMain> = addresses?.into_iter().flatten().collect();
-
-        if let Some(filters) = &self.filters {
-            addresses.retain(|address| filters.0.iter().any(|f| f == address));
-        }
-
-        for consumer in self.consumers {
-            let mut addresses = addresses.clone();
-            if let Some(filters) = &consumer.filters {
-                addresses.retain(|address| filters.0.iter().any(|f| f == address));
-            }
-
-            consumer.consume(addresses)?;
-        }
-
-        Ok(())
-    }
 }
