@@ -1,6 +1,6 @@
 use std::{fmt::Display, str::FromStr};
 
-use anyhow::{anyhow, Error};
+use anyhow::{Error, anyhow};
 use chrono::{DateTime, Utc};
 use ipnet::IpNet;
 use serde_derive::{Deserialize, Serialize};
@@ -11,9 +11,10 @@ use super::{
         AssignedObject, BriefSite, BriefTenant, BriefVlan, BriefVrf, Family, Intermediate, Tag,
     },
     prefix::Scope,
+    site::Site,
     tenant::Tenant,
 };
-use crate::data::AddressMain;
+use crate::data::{AddressMain, Location};
 
 #[serde_with::skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -49,6 +50,7 @@ pub struct IpAddress {
     pub scope: Option<Scope>,
     pub vlan: Option<BriefVlan>,
     pub full_tenant: Option<Tenant>,
+    pub full_site: Option<Site>,
     pub domain: Option<String>,
 }
 
@@ -71,6 +73,14 @@ impl From<IpAddress> for AddressMain {
                 .alias
                 .map(|s| s.lines().map(|s| s.trim().to_string()).collect()),
             tags: Some(ip.tags.into_iter().map(|tag| tag.slug).collect()),
+            location: ip.full_site.and_then(|s| {
+                s.latitude.and_then(|latitude| {
+                    s.longitude.map(|longitude| Location {
+                        latitude,
+                        longitude,
+                    })
+                })
+            }),
             ..Default::default()
         }
     }

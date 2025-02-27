@@ -2,12 +2,12 @@ use std::borrow::Cow;
 
 use anyhow::Result;
 use clap::Args;
-use data::{ip_address::IpAddress, prefix::Prefix, tenant::Tenant, List};
+use data::{ip_address::IpAddress, prefix::{Prefix, Scope}, site::Site, tenant::Tenant, List};
 use log::{debug, info};
 use reqwest::{
-    blocking::Client,
-    header::{HeaderMap, HeaderValue, AUTHORIZATION},
     Url,
+    blocking::Client,
+    header::{AUTHORIZATION, HeaderMap, HeaderValue},
 };
 use serde::de::DeserializeOwned;
 use serde_derive::{Deserialize, Serialize};
@@ -98,6 +98,7 @@ impl NetboxClient {
             self.get_list("/ipam/prefixes", Some(&[("ordering", "prefix")]))?;
 
         let tenants: Vec<Tenant> = self.get_list("/tenancy/tenants", None)?;
+        let sites: Vec<Site> = self.get_list("/dcim/sites", None)?;
 
         for address in &mut addresses {
             let mut scope = None;
@@ -119,6 +120,11 @@ impl NetboxClient {
             if let Some(tenant) = &address.tenant {
                 if let Some(other) = tenants.iter().find(|t| tenant.id == t.id) {
                     address.full_tenant = Some(other.clone());
+                }
+            }
+            if let Some(Scope::Site(site)) = &address.scope {
+                if let Some(other) = sites.iter().find(|s| site.id == s.id) {
+                    address.full_site = Some(other.clone());
                 }
             }
         }

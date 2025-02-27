@@ -1,7 +1,7 @@
-use std::{fmt::Debug, net::IpAddr, str::FromStr};
+use std::{fmt::Debug, net::IpAddr, num::ParseFloatError, str::FromStr};
 
-use anyhow::{anyhow, Error, Result};
-use clap::{error::ErrorKind, ArgMatches, Args, Command, FromArgMatches};
+use anyhow::{Error, anyhow};
+use clap::{ArgMatches, Args, Command, FromArgMatches, error::ErrorKind};
 use derive_more::From;
 use serde_derive::{Deserialize, Serialize};
 use templater_macro::Filter;
@@ -24,6 +24,7 @@ pub struct Address {
     pub alias: Vec<String>,
     #[filter(vec)]
     pub tags: Vec<String>,
+    pub location: Location,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -33,6 +34,12 @@ pub struct Domains(pub Vec<Domain>);
 pub struct Domain {
     pub name: String,
     pub addresses: Vec<AddressMain>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Location {
+    pub longitude: f64,
+    pub latitude: f64,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -53,7 +60,7 @@ impl From<Family> for u8 {
 
 impl TryFrom<u8> for Family {
     type Error = Error;
-    fn try_from(value: u8) -> Result<Self> {
+    fn try_from(value: u8) -> anyhow::Result<Self> {
         Ok(match value {
             4 => Self::IPv4,
             6 => Self::IPv6,
@@ -64,11 +71,23 @@ impl TryFrom<u8> for Family {
 
 impl FromStr for Family {
     type Err = Error;
-    fn from_str(s: &str) -> Result<Self> {
+    fn from_str(s: &str) -> anyhow::Result<Self> {
         Ok(match s {
             "ipv4" => Self::IPv4,
             "ipv6" => Self::IPv6,
             _ => u8::from_str(s)?.try_into()?,
+        })
+    }
+}
+
+impl FromStr for Location {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self, anyhow::Error> {
+        let coords: Result<Vec<f64>, ParseFloatError> = s.split(',').map(|f| f.parse()).collect();
+        let mut coords = coords?;
+        Ok(Self {
+            longitude: coords.pop().ok_or(anyhow!("Failed to parse longitude"))?,
+            latitude: coords.pop().ok_or(anyhow!("Failed to parse latitude"))?,
         })
     }
 }

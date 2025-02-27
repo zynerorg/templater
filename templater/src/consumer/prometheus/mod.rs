@@ -1,13 +1,13 @@
 use std::{
     fmt::Debug,
     fs::File,
-    io::{stdout, Write},
+    io::{Write, stdout},
     path::PathBuf,
     str::FromStr,
 };
 
-use anyhow::{anyhow, Error, Result};
-use clap::{builder::PossibleValue, Args, ValueEnum};
+use anyhow::{Error, Result, anyhow};
+use clap::{Args, ValueEnum, builder::PossibleValue};
 use derive_more::From;
 use log::{debug, info};
 use serde_derive::{Deserialize, Serialize};
@@ -75,6 +75,7 @@ struct Data {
 enum Target {
     String(String),
     Integer(i64),
+    Float(f64),
     #[default]
     Null,
 }
@@ -104,6 +105,11 @@ impl TryFrom<AddressMain> for Data {
             site,
             dns_name
         );
+
+        if let Some(value) = ip.location {
+            labels.push(("__meta_netbox_latitude".to_string(), value.latitude.into()));
+            labels.push(("__meta_netbox_longitude".to_string(), value.longitude.into()));
+        }
 
         Ok(Self {
             targets: vec![
