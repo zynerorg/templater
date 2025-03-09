@@ -2,6 +2,13 @@ when:
   - event: push
     branch: main
 
+matrix:
+  include:
+    - OCI_TAG: latest
+      BASE_IMAGE: scratch
+    - OCI_TAG: latest-alpine
+      BASE_IMAGE: alpine:3.21
+
 steps:
   - name: test
     image: rust:1.85-alpine3.21
@@ -16,11 +23,13 @@ steps:
       - cargo clippy
 
   - name: publish
-    image: quay.io/woodpeckerci/plugin-kaniko
+    image: woodpeckerci/plugin-kaniko
     settings:
-      auto_tag: true
       registry: reg.zyner.org
       repo: internal/templater
+      tags: ${OCI_TAG}
+      build_args:
+        BASE_IMAGE: ${BASE_IMAGE}
       username:
         from_secret: registry-username
       password:
