@@ -6,7 +6,7 @@ COPY . .
 RUN cargo build --release --target x86_64-unknown-linux-musl
 
 
-FROM alpine:3.21
+FROM alpine:3.22
 
 RUN apk add --no-cache git jinja2-cli openssh-client
 
