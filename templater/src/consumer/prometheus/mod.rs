@@ -103,7 +103,8 @@ impl TryFrom<AddressMain> for Data {
             tenant,
             tenant_group,
             site,
-            dns_name
+            dns_name,
+            role
         );
 
         if let Some(value) = ip.location {

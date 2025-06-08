@@ -25,6 +25,7 @@ pub struct Address {
     #[filter(vec)]
     pub tags: Vec<String>,
     pub location: Location,
+    pub role: String,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

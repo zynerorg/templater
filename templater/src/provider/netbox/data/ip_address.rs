@@ -81,6 +81,7 @@ impl From<IpAddress> for AddressMain {
                     })
                 })
             }),
+            role: ip.role.map(|r| r.to_string()),
             ..Default::default()
         }
     }
@@ -165,5 +166,21 @@ impl TryFrom<Intermediate> for Role {
             "carp" => Role::Carp,
             _ => return Err(anyhow!("Unexpected role")),
         })
+    }
+}
+
+impl Display for Role {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
+            Role::Loopback => "loopback",
+            Role::Secondary => "secondary",
+            Role::Anycast => "anycast",
+            Role::Vip => "vip",
+            Role::Vrrp => "vrrp",
+            Role::Hsrp => "hsrp",
+            Role::Glbp => "glbp",
+            Role::Carp => "carp",
+        };
+        write!(f, "{str}")
     }
 }
