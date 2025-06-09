@@ -52,6 +52,7 @@ pub struct IpAddress {
     pub full_tenant: Option<Tenant>,
     pub full_site: Option<Site>,
     pub domain: Option<String>,
+    pub prefix: Option<IpNet>,
 }
 
 impl From<IpAddress> for AddressMain {
@@ -82,6 +83,7 @@ impl From<IpAddress> for AddressMain {
                 })
             }),
             role: ip.role.map(|r| r.to_string()),
+            prefix: ip.prefix,
             ..Default::default()
         }
     }

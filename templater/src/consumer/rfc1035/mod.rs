@@ -9,13 +9,14 @@ use std::{
 use chrono::Utc;
 use clap::Args;
 use derive_more::Display;
+use ipnet::IpNet;
 use log::{debug, info};
 use serde_derive::{Deserialize, Serialize};
 use serde_inline_default::serde_inline_default;
 use zoneparser::{RRType, Record as ZoneRecord, ZoneParser};
 
 use super::Consumer;
-use crate::data::{AddressMain, Domains};
+use crate::data::{AddressMain, Domains, ip_net_to_reverse_dns};
 
 #[serde_inline_default]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Args)]
@@ -100,6 +101,7 @@ enum RType {
     AAAA,
     SOA,
     CNAME,
+    PTR,
 }
 
 impl PartialEq<ZoneRecord> for Record {
@@ -134,13 +136,18 @@ impl Record {
             )
         });
         // FIXME: Cross-domain CNAME
-        let domains: Domains = addresses.into();
-        for domain in domains.0 {
+        let domains: Domains = addresses.clone().into();
+        let reverse_domains = Domains::reverse_from_addresses(addresses);
+
+        for domain in domains.0.into_iter().zip([false].into_iter().cycle())
+                .chain(reverse_domains.0.into_iter().zip([true].into_iter().cycle())) {
             info!("Converting addresses to RFC1035 format");
+            let reverse = domain.1;
+            let domain = domain.0;
             let records = domain
                 .addresses
                 .into_iter()
-                .filter_map(Self::from_address)
+                .filter_map(|addr| Self::from_address(addr, reverse))
                 .flatten()
                 .collect::<Vec<Self>>();
 
@@ -217,22 +224,39 @@ impl Record {
         Ok(())
     }
 
-    fn from_address(ip: AddressMain) -> Option<Vec<Self>> {
+    fn from_address(ip: AddressMain, reverse: bool) -> Option<Vec<Self>> {
         let mut records = Vec::new();
         if let Some(address) = ip.address {
+            let rtype = if reverse {
+                RType::PTR
+            } else {
+                address.into()
+            };
+
+            let dns = ip.dns_name.as_ref()?.to_owned();
+            let (name, rdata) = if reverse {
+                let address = ip_net_to_reverse_dns(&IpNet::new(address, ip.prefix?.prefix_len()).ok()?, false);
+                (address, dns)
+            } else {
+                (dns, address.to_string())
+            };
+
             records.push(Self {
-                name: ip.dns_name.as_ref()?.to_owned(),
-                rtype: address.into(),
-                rdata: address.to_string(),
+                name,
+                rtype,
+                rdata,
             });
         }
-        if let Some(aliases) = ip.alias {
-            for alias in aliases {
-                records.push(Self {
-                    name: alias,
-                    rtype: RType::CNAME,
-                    rdata: ip.dns_name.as_ref()?.to_owned(),
-                });
+
+        if !reverse {
+            if let Some(aliases) = ip.alias {
+                for alias in aliases {
+                    records.push(Self {
+                        name: alias,
+                        rtype: RType::CNAME,
+                        rdata: ip.dns_name.as_ref()?.to_owned(),
+                    });
+                }
             }
         }
 

@@ -103,6 +103,7 @@ impl NetboxClient {
         for address in &mut addresses {
             let mut scope = None;
             let mut vlan = None;
+            let mut address_prefix = None;
             for prefix in &prefixes {
                 if prefix.prefix.contains(&address.address.addr()) {
                     if let Some(scope_i) = &prefix.scope {
@@ -111,11 +112,23 @@ impl NetboxClient {
                     if let Some(vlan_i) = &prefix.vlan {
                         vlan = Some(vlan_i);
                     }
+
+                    let prefix_bits = if prefix.prefix.network().is_ipv4() {
+                        8
+                    } else {
+                        4
+                    };
+                    if address_prefix.is_none()
+                        && prefix.prefix.prefix_len().rem_euclid(prefix_bits) == 0
+                    {
+                        address_prefix = Some(&prefix.prefix);
+                    }
                 }
             }
 
             address.scope = scope.cloned();
             address.vlan = vlan.cloned();
+            address.prefix = address_prefix.copied();
 
             if let Some(tenant) = &address.tenant {
                 if let Some(other) = tenants.iter().find(|t| tenant.id == t.id) {

@@ -1,8 +1,8 @@
 use std::{fmt::Debug, net::IpAddr, num::ParseFloatError, str::FromStr};
-
 use anyhow::{Error, anyhow};
 use clap::{ArgMatches, Args, Command, FromArgMatches, error::ErrorKind};
 use derive_more::From;
+use ipnet::IpNet;
 use serde_derive::{Deserialize, Serialize};
 use templater_macro::Filter;
 use tldextract::TldExtractor;
@@ -26,6 +26,7 @@ pub struct Address {
     pub tags: Vec<String>,
     pub location: Location,
     pub role: String,
+    pub prefix: IpNet
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -119,6 +120,54 @@ impl From<Vec<AddressMain>> for Domains {
 
         Self(domains)
     }
+}
+
+impl Domains {
+    pub fn reverse_from_addresses(mut addresses: Vec<AddressMain>) -> Self {
+        for address in &mut addresses {
+            address.domain = address.prefix.map(|prefix| {
+                ip_net_to_reverse_dns(&prefix, true)
+            });
+        }
+
+        addresses.into()
+    }
+}
+
+pub fn ip_net_to_reverse_dns(addr: &IpNet, strip: bool) -> String {
+    let segments = match addr.addr() {
+        IpAddr::V4(ip) => ip.octets().to_vec(),
+        IpAddr::V6(ip) => {
+            let mut nibbles = Vec::new();
+            let bits = ip.to_bits().to_be_bytes();
+            for byte in bits {
+                nibbles.push(byte >> 4);
+                nibbles.push(byte & 0xF);
+            }
+            nibbles
+        },
+    };
+
+    let is_ipv4 = addr.addr().is_ipv4();
+    let family = if is_ipv4 {
+        (32, 8, ".in-addr.arpa.")
+    } else {
+        (128, 4, ".ip6.arpa.")
+    };
+    let skip_distance = if strip {
+        (family.0 - addr.prefix_len() as usize) / family.1
+    } else {
+        0
+    };
+
+    let addr = segments.iter().rev().skip(skip_distance).map(|segment| {
+        if is_ipv4 {
+            segment.to_string()
+        } else {
+            format!("{segment:1x}")
+        }
+    }).collect::<Vec<String>>().join(".");
+    format!("{}{}", addr, family.2)
 }
 
 fn check<T>(a: Option<&Vec<T>>, b: Option<&T>, default: bool) -> bool
