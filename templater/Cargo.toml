@@ -8,7 +8,7 @@ license = "GPL-3.0-or-later"
 [dependencies]
 clap = { version = "4.5.31", features = ["derive", "env"] }
 pretty_env_logger = "0.5.0"
-reqwest = { version = "0.12.12", default-features = false, features = ["blocking", "json", "rustls-tls-native-roots"] }
+reqwest = { version = "0.12.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 serde = { version = "1.0.218", features = ["derive"] }
 serde_json = "1.0.139"
 serde_derive = "1.0.217"
