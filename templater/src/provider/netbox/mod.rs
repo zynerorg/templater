@@ -2,7 +2,13 @@ use std::borrow::Cow;
 
 use anyhow::Result;
 use clap::Args;
-use data::{ip_address::IpAddress, prefix::{Prefix, Scope}, site::Site, tenant::Tenant, List};
+use data::{
+    List,
+    ip_address::IpAddress,
+    prefix::{Prefix, Scope},
+    site::Site,
+    tenant::Tenant,
+};
 use log::{debug, info};
 use reqwest::{
     Url,
@@ -59,7 +65,7 @@ impl NetboxClient {
         variant: &str,
         query: Option<&[(&str, &str)]>,
     ) -> Result<Vec<T>> {
-        debug!("Getting {}", variant);
+        debug!("Getting {variant}");
         let mut builder = self
             .client
             .get(format!("{}/{}/", self.base_address, variant))

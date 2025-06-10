@@ -2,8 +2,8 @@ use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span, TokenStream as TokenStream2};
 use quote::quote;
 use syn::{
-    parse_macro_input, parse_quote, punctuated::Punctuated, token::Comma, DeriveInput, Field, Fields,
-    FieldsNamed, Path,
+    DeriveInput, Field, Fields, FieldsNamed, Path, parse_macro_input, parse_quote,
+    punctuated::Punctuated, token::Comma,
 };
 
 #[proc_macro_derive(Filter, attributes(filter))]

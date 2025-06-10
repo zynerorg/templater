@@ -1,6 +1,6 @@
 use std::{net::IpAddr, str::FromStr};
 
-use anyhow::{anyhow, Error};
+use anyhow::{Error, anyhow};
 use clap::Args;
 use serde_derive::{Deserialize, Serialize};
 

@@ -1,15 +1,10 @@
 use std::str::FromStr;
 
-use anyhow::Error;
-use anyhow::anyhow;
-use chrono::DateTime;
-use chrono::Utc;
-use serde_derive::Deserialize;
-use serde_derive::Serialize;
+use anyhow::{Error, anyhow};
+use chrono::{DateTime, Utc};
+use serde_derive::{Deserialize, Serialize};
 
-use super::common::CustomFields;
-use super::common::Tag;
-use super::common::{BriefTenant, Intermediate};
+use super::common::{BriefTenant, CustomFields, Intermediate, Tag};
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Site {

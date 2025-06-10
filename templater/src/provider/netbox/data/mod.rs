@@ -1,8 +1,8 @@
 pub mod common;
 pub mod ip_address;
 pub mod prefix;
-pub mod tenant;
 pub mod site;
+pub mod tenant;
 
 use serde_derive::{Deserialize, Serialize};
 

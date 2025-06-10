@@ -109,7 +109,10 @@ impl TryFrom<AddressMain> for Data {
 
         if let Some(value) = ip.location {
             labels.push(("__meta_netbox_latitude".to_string(), value.latitude.into()));
-            labels.push(("__meta_netbox_longitude".to_string(), value.longitude.into()));
+            labels.push((
+                "__meta_netbox_longitude".to_string(),
+                value.longitude.into(),
+            ));
         }
 
         Ok(Self {

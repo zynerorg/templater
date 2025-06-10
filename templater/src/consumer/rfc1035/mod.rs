@@ -1,12 +1,11 @@
 use std::{
     cmp::PartialEq,
-    fs::{create_dir, File},
-    io::{stdout, Write},
+    fs::{File, create_dir, read_dir, remove_file},
+    io::{Write, stdout},
     net::IpAddr,
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
-use std::fs::{read_dir, remove_file};
-use std::path::Path;
+
 use chrono::Utc;
 use clap::Args;
 use derive_more::Display;
@@ -142,12 +141,26 @@ impl Record {
 
         if let Some(directory) = &config.output {
             info!("Cleaning directory");
-            let domains: Vec<&str> = domains.0.iter().chain(reverse_domains.0.iter()).map(|d| d.name.as_str()).collect();
+            let domains: Vec<&str> = domains
+                .0
+                .iter()
+                .chain(reverse_domains.0.iter())
+                .map(|d| d.name.as_str())
+                .collect();
             Self::clean_directory(directory, &domains)?;
         }
 
-        for domain in domains.0.into_iter().zip([false].into_iter().cycle())
-                .chain(reverse_domains.0.into_iter().zip([true].into_iter().cycle())) {
+        for domain in domains
+            .0
+            .into_iter()
+            .zip([false].into_iter().cycle())
+            .chain(
+                reverse_domains
+                    .0
+                    .into_iter()
+                    .zip([true].into_iter().cycle()),
+            )
+        {
             info!("Converting addresses to RFC1035 format");
             let reverse = domain.1;
             let domain = domain.0;
@@ -234,25 +247,20 @@ impl Record {
     fn from_address(ip: AddressMain, reverse: bool) -> Option<Vec<Self>> {
         let mut records = Vec::new();
         if let Some(address) = ip.address {
-            let rtype = if reverse {
-                RType::PTR
-            } else {
-                address.into()
-            };
+            let rtype = if reverse { RType::PTR } else { address.into() };
 
             let dns = ip.dns_name.as_ref()?.to_owned();
             let (name, rdata) = if reverse {
-                let address = ip_net_to_reverse_dns(&IpNet::new(address, ip.prefix?.prefix_len()).ok()?, false);
+                let address = ip_net_to_reverse_dns(
+                    &IpNet::new(address, ip.prefix?.prefix_len()).ok()?,
+                    false,
+                );
                 (address, dns)
             } else {
                 (dns, address.to_string())
             };
 
-            records.push(Self {
-                name,
-                rtype,
-                rdata,
-            });
+            records.push(Self { name, rtype, rdata });
         }
 
         if !reverse {
@@ -308,17 +316,20 @@ impl Record {
 
     fn clean_directory(directory: &Path, domains: &[&str]) -> anyhow::Result<()> {
         let dir = read_dir(directory)?;
-        let files = dir.filter_map(Result::ok).filter(|f| f.path().is_file()).filter(|f| {
-            let path = f.path();
-            let Some(name) = path.file_name() else {
-                return true;
-            };
-            let Some(name) = name.to_str() else {
-                return true;
-            };
+        let files = dir
+            .filter_map(Result::ok)
+            .filter(|f| f.path().is_file())
+            .filter(|f| {
+                let path = f.path();
+                let Some(name) = path.file_name() else {
+                    return true;
+                };
+                let Some(name) = name.to_str() else {
+                    return true;
+                };
 
-            !domains.contains(&name)
-        });
+                !domains.contains(&name)
+            });
         for file in files {
             debug!("Removing file {:?}", file.path().display());
             remove_file(file.path())?;

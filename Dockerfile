@@ -1,4 +1,4 @@
-FROM rust:1.85-alpine3.21 AS build
+FROM rust:1.87.0-alpine3.22 AS build
 
 WORKDIR /build
 RUN apk add --no-cache build-base
@@ -6,7 +6,7 @@ COPY . .
 RUN cargo build --release --target x86_64-unknown-linux-musl
 
 
-FROM alpine:3.21
+FROM alpine:3.22
 
 RUN apk add --no-cache git jinja2-cli openssh-client
 

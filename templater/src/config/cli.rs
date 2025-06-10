@@ -1,6 +1,6 @@
 use std::{env::args, path::PathBuf};
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::{Error, Result, anyhow};
 use clap::{Args, FromArgMatches, Parser, Subcommand};
 
 use super::{Config as ConfigI, Consumer, ConsumerConfig, Provider, ProviderConfig};

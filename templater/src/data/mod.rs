@@ -1,4 +1,5 @@
 use std::{fmt::Debug, net::IpAddr, num::ParseFloatError, str::FromStr};
+
 use anyhow::{Error, anyhow};
 use clap::{ArgMatches, Args, Command, FromArgMatches, error::ErrorKind};
 use derive_more::From;
@@ -26,7 +27,7 @@ pub struct Address {
     pub tags: Vec<String>,
     pub location: Location,
     pub role: String,
-    pub prefix: IpNet
+    pub prefix: IpNet,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -125,9 +126,9 @@ impl From<Vec<AddressMain>> for Domains {
 impl Domains {
     pub fn reverse_from_addresses(mut addresses: Vec<AddressMain>) -> Self {
         for address in &mut addresses {
-            address.domain = address.prefix.map(|prefix| {
-                ip_net_to_reverse_dns(&prefix, true)
-            });
+            address.domain = address
+                .prefix
+                .map(|prefix| ip_net_to_reverse_dns(&prefix, true));
         }
 
         addresses.into()
@@ -145,7 +146,7 @@ pub fn ip_net_to_reverse_dns(addr: &IpNet, strip: bool) -> String {
                 nibbles.push(byte & 0xF);
             }
             nibbles
-        },
+        }
     };
 
     let is_ipv4 = addr.addr().is_ipv4();
@@ -160,13 +161,19 @@ pub fn ip_net_to_reverse_dns(addr: &IpNet, strip: bool) -> String {
         0
     };
 
-    let addr = segments.iter().rev().skip(skip_distance).map(|segment| {
-        if is_ipv4 {
-            segment.to_string()
-        } else {
-            format!("{segment:1x}")
-        }
-    }).collect::<Vec<String>>().join(".");
+    let addr = segments
+        .iter()
+        .rev()
+        .skip(skip_distance)
+        .map(|segment| {
+            if is_ipv4 {
+                segment.to_string()
+            } else {
+                format!("{segment:1x}")
+            }
+        })
+        .collect::<Vec<String>>()
+        .join(".");
     format!("{}{}", addr, family.2)
 }
 

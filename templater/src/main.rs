@@ -11,7 +11,7 @@ use anyhow::Result;
 use dotenvy::dotenv;
 use log::debug;
 
-use crate::config::{cli::Cli, Config};
+use crate::config::{Config, cli::Cli};
 
 fn main() -> Result<()> {
     dotenv().ok();
