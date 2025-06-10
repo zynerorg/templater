@@ -150,9 +150,9 @@ pub fn ip_net_to_reverse_dns(addr: &IpNet, strip: bool) -> String {
 
     let is_ipv4 = addr.addr().is_ipv4();
     let family = if is_ipv4 {
-        (32, 8, ".in-addr.arpa.")
+        (32, 8, ".in-addr.arpa")
     } else {
-        (128, 4, ".ip6.arpa.")
+        (128, 4, ".ip6.arpa")
     };
     let skip_distance = if strip {
         (family.0 - addr.prefix_len() as usize).div_ceil(family.1)
