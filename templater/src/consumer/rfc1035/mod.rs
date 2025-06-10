@@ -5,7 +5,8 @@ use std::{
     net::IpAddr,
     path::PathBuf,
 };
-
+use std::fs::{read_dir, remove_file};
+use std::path::Path;
 use chrono::Utc;
 use clap::Args;
 use derive_more::Display;
@@ -138,6 +139,12 @@ impl Record {
         // FIXME: Cross-domain CNAME
         let domains: Domains = addresses.clone().into();
         let reverse_domains = Domains::reverse_from_addresses(addresses);
+
+        if let Some(directory) = &config.output {
+            info!("Cleaning directory");
+            let domains: Vec<&str> = domains.0.iter().chain(reverse_domains.0.iter()).map(|d| d.name.as_str()).collect();
+            Self::clean_directory(directory, &domains)?;
+        }
 
         for domain in domains.0.into_iter().zip([false].into_iter().cycle())
                 .chain(reverse_domains.0.into_iter().zip([true].into_iter().cycle())) {
@@ -297,5 +304,25 @@ impl Record {
         }
 
         a.iter().zip(b.iter()).filter(|(a, b)| **a == ***b).count() == a.len()
+    }
+
+    fn clean_directory(directory: &Path, domains: &[&str]) -> anyhow::Result<()> {
+        let dir = read_dir(directory)?;
+        let files = dir.filter_map(Result::ok).filter(|f| f.path().is_file()).filter(|f| {
+            let path = f.path();
+            let Some(name) = path.file_name() else {
+                return true;
+            };
+            let Some(name) = name.to_str() else {
+                return true;
+            };
+
+            !domains.contains(&name)
+        });
+        for file in files {
+            debug!("Removing file {:?}", file.path().display());
+            remove_file(file.path())?;
+        }
+        Ok(())
     }
 }
