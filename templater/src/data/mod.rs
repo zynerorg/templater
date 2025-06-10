@@ -155,7 +155,7 @@ pub fn ip_net_to_reverse_dns(addr: &IpNet, strip: bool) -> String {
         (128, 4, ".ip6.arpa.")
     };
     let skip_distance = if strip {
-        (family.0 - addr.prefix_len() as usize) / family.1
+        (family.0 - addr.prefix_len() as usize).div_ceil(family.1)
     } else {
         0
     };

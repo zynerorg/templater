@@ -112,15 +112,7 @@ impl NetboxClient {
                     if let Some(vlan_i) = &prefix.vlan {
                         vlan = Some(vlan_i);
                     }
-
-                    let prefix_bits = if prefix.prefix.network().is_ipv4() {
-                        8
-                    } else {
-                        4
-                    };
-                    if address_prefix.is_none()
-                        && prefix.prefix.prefix_len().rem_euclid(prefix_bits) == 0
-                    {
+                    if address_prefix.is_none() {
                         address_prefix = Some(&prefix.prefix);
                     }
                 }
