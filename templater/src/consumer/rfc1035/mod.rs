@@ -150,24 +150,12 @@ impl Record {
             Self::clean_directory(directory, &domains)?;
         }
 
-        for domain in domains
-            .0
-            .into_iter()
-            .zip([false].into_iter().cycle())
-            .chain(
-                reverse_domains
-                    .0
-                    .into_iter()
-                    .zip([true].into_iter().cycle()),
-            )
-        {
+        for domain in domains.0.into_iter().chain(reverse_domains.0.into_iter()) {
             info!("Converting addresses to RFC1035 format");
-            let reverse = domain.1;
-            let domain = domain.0;
             let records = domain
                 .addresses
                 .into_iter()
-                .filter_map(|addr| Self::from_address(addr, reverse))
+                .filter_map(|addr| Self::from_address(addr, domain.reverse))
                 .flatten()
                 .collect::<Vec<Self>>();
 

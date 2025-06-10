@@ -10,7 +10,9 @@ use serde_derive::{Deserialize, Serialize};
 use tldextract::TldOption;
 
 use crate::{
-    consumer::{Consumer as ConsumerTrait, prometheus::Prometheus, rfc1035::Rfc1035},
+    consumer::{
+        Consumer as ConsumerTrait, cloudflare::Cloudflare, prometheus::Prometheus, rfc1035::Rfc1035,
+    },
     data::{AddressMain, VecAddressFilter},
     provider::{Provider as ProviderTrait, netbox::Netbox, yaml::Yaml},
 };
@@ -128,6 +130,7 @@ impl ConsumerTrait for Consumer {
         match &self.config {
             ConsumerConfig::Prometheus(n) => n.consume(addresses),
             ConsumerConfig::Rfc1035(n) => n.consume(addresses),
+            ConsumerConfig::Cloudflare(n) => n.consume(addresses),
             ConsumerConfig::Null => Ok(()),
         }
     }
@@ -138,6 +141,7 @@ impl ConsumerTrait for Consumer {
 enum ConsumerConfig {
     Rfc1035(Rfc1035),
     Prometheus(Prometheus),
+    Cloudflare(Cloudflare),
     #[default]
     Null,
 }

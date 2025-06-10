@@ -1,5 +1,6 @@
 use crate::data::AddressMain;
 
+pub mod cloudflare;
 pub mod prometheus;
 pub mod rfc1035;
 

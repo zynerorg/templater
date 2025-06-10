@@ -37,6 +37,7 @@ pub struct Domains(pub Vec<Domain>);
 pub struct Domain {
     pub name: String,
     pub addresses: Vec<AddressMain>,
+    pub reverse: bool,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -96,7 +97,13 @@ impl FromStr for Location {
 }
 
 impl From<Vec<AddressMain>> for Domains {
-    fn from(mut addresses: Vec<AddressMain>) -> Self {
+    fn from(addresses: Vec<AddressMain>) -> Self {
+        Self::from_addresses(addresses, false)
+    }
+}
+
+impl Domains {
+    fn from_addresses(mut addresses: Vec<AddressMain>, reverse: bool) -> Self {
         let mut domains = Vec::new();
         let mut domain = Domain::default();
         addresses.sort_by(|a, b| a.domain.cmp(&b.domain));
@@ -112,6 +119,7 @@ impl From<Vec<AddressMain>> for Domains {
                 domain = Domain {
                     name: domain_i.to_string(),
                     addresses: Vec::new(),
+                    reverse,
                 };
             }
             domain.addresses.push(address);
@@ -121,9 +129,7 @@ impl From<Vec<AddressMain>> for Domains {
 
         Self(domains)
     }
-}
 
-impl Domains {
     pub fn reverse_from_addresses(mut addresses: Vec<AddressMain>) -> Self {
         for address in &mut addresses {
             address.domain = address
@@ -131,7 +137,7 @@ impl Domains {
                 .map(|prefix| ip_net_to_reverse_dns(&prefix, true));
         }
 
-        addresses.into()
+        Self::from_addresses(addresses, true)
     }
 }
 
