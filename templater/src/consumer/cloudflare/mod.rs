@@ -29,6 +29,8 @@ pub struct Cloudflare {
     #[arg(long, env("CLOUDFLARE_DRY_RUN"), default_value_t)]
     #[serde(default)]
     pub dry_run: bool,
+    #[arg(long, env("CLOUDFLARE_ZONES"))]
+    pub zones: Option<Vec<String>>,
 }
 
 impl Default for Cloudflare {
@@ -37,6 +39,7 @@ impl Default for Cloudflare {
             token: String::default(),
             ttl: 1,
             dry_run: Default::default(),
+            zones: Option::default(),
         }
     }
 }
@@ -107,6 +110,12 @@ impl CloudflareClient {
 
         let zip = zones
             .into_iter()
+            .filter(|zone| {
+                let Some(filter) = &self.config.zones else {
+                    return true;
+                };
+                filter.contains(&zone.name)
+            })
             .filter_map(|zone| {
                 let mut domain_out = None;
                 for domain in &domains.0 {
