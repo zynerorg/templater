@@ -1,7 +1,6 @@
 FROM rust:1.87.0-alpine3.22 AS chef
 WORKDIR /build
-RUN apk add --no-cache build-base
-RUN cargo install cargo-chef
+RUN apk add --no-cache build-base && cargo install cargo-chef && rustup component add clippy
 
 
 FROM chef AS planner
@@ -25,4 +24,3 @@ RUN apk add --no-cache git jinja2-cli openssh-client
 COPY --from=builder /build/target/x86_64-unknown-linux-musl/release/templater /templater
 USER user
 ENTRYPOINT ["/templater"]
-# 1

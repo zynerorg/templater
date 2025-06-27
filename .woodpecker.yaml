@@ -4,17 +4,26 @@ when:
       - pull_request
 
 steps:
+  - name: build
+    image: woodpeckerci/plugin-kaniko
+    settings:
+      target: builder
+      cache: true
+      tags: latest
+      registry: reg.zyner.org
+      repo: internal/templater/build
+      username:
+        from_secret: registry-username
+      password:
+        from_secret: registry-password
   - name: test
-    image: rust:1.87.0-alpine3.22
+    image: reg.zyner.org/internal/templater/build:latest
     environment:
       CARGO_TERM_COLOR: always
       RUSTFLAGS: "-Dwarnings"
     commands:
-      - apk add --no-cache build-base
-      - rustup component add clippy
-      - cargo check
-      - cargo test
-      - cargo clippy
+      - cargo test --release
+      - cargo clippy --release
 
   - name: tags
     image: ghcr.io/dvjn/woodpecker-docker-tags-plugin
