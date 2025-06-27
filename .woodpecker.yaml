@@ -26,6 +26,7 @@ steps:
   - name: publish
     image: woodpeckerci/plugin-kaniko
     settings:
+      cache: true
       registry: reg.zyner.org
       repo: internal/templater
       username:
