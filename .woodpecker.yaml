@@ -5,19 +5,22 @@ when:
 
 steps:
   - name: build
-    image: woodpeckerci/plugin-kaniko
+    image: woodpeckerci/plugin-docker-buildx
     settings:
       target: builder
-      cache: true
-      tags: latest
-      registry: reg.zyner.org
-      repo: internal/templater/build
-      username:
-        from_secret: registry-username
-      password:
-        from_secret: registry-password
+      tags: build
+      cache_images:
+        - reg.zyner.org/internal/templater:cache
+      repo: reg.zyner.org/internal/templater
+      logins:
+        - registry: https://reg.zyner.org
+          username:
+            from_secret: registry-username
+          password:
+            from_secret: registry-password
+
   - name: test
-    image: reg.zyner.org/internal/templater/build:latest
+    image: reg.zyner.org/internal/templater:build
     environment:
       CARGO_TERM_COLOR: always
       RUSTFLAGS: "-Dwarnings"
@@ -35,10 +38,12 @@ steps:
   - name: publish
     image: woodpeckerci/plugin-kaniko
     settings:
-      cache: true
-      registry: reg.zyner.org
-      repo: internal/templater
-      username:
-        from_secret: registry-username
-      password:
-        from_secret: registry-password
+      cache_images:
+        - reg.zyner.org/internal/templater:cache
+      repo: reg.zyner.org/internal/templater
+      logins:
+        - registry: https://reg.zyner.org
+          username:
+            from_secret: registry-username
+          password:
+            from_secret: registry-password
