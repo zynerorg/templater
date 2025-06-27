@@ -15,12 +15,18 @@ steps:
       - cargo test
       - cargo clippy
 
+  - name: tags
+    image: ghcr.io/dvjn/woodpecker-docker-tags-plugin
+    settings:
+      tags: |
+        edge -v latest
+        pr
+        sha
   - name: publish
     image: woodpeckerci/plugin-kaniko
     settings:
       registry: reg.zyner.org
       repo: internal/templater
-      tags: latest
       username:
         from_secret: registry-username
       password:
