@@ -1,4 +1,5 @@
 FROM rust:1.87.0-alpine3.22 AS chef
+ENV RUSTFLAGS=-Dwarnings
 WORKDIR /build
 RUN apk add --no-cache build-base && cargo install cargo-chef && rustup component add clippy
 

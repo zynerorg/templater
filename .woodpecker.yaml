@@ -23,7 +23,6 @@ steps:
     image: reg.zyner.org/internal/templater:build
     environment:
       CARGO_TERM_COLOR: always
-      RUSTFLAGS: "-Dwarnings"
     commands:
       - cargo test --release
       - cargo clippy --release
