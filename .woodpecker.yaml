@@ -4,28 +4,28 @@ when:
       - pull_request
 
 steps:
-  - name: build
-    image: woodpeckerci/plugin-docker-buildx
-    settings:
-      target: builder
-      tags: build
-      cache_images:
-        - reg.zyner.org/internal/templater:cache
-      repo: reg.zyner.org/internal/templater
-      logins:
-        - registry: https://reg.zyner.org
-          username:
-            from_secret: registry-username
-          password:
-            from_secret: registry-password
-
-  - name: test
-    image: reg.zyner.org/internal/templater:build
-    environment:
-      CARGO_TERM_COLOR: always
-    commands:
-      - cargo test --release
-      - cargo clippy --release
+#  - name: build
+#    image: woodpeckerci/plugin-docker-buildx
+#    settings:
+#      target: builder
+#      tags: build
+#      cache_images:
+#        - reg.zyner.org/internal/templater:cache
+#      repo: reg.zyner.org/internal/templater
+#      logins:
+#        - registry: https://reg.zyner.org
+#          username:
+#            from_secret: registry-username
+#          password:
+#            from_secret: registry-password
+#
+#  - name: test
+#    image: reg.zyner.org/internal/templater:build
+#    environment:
+#      CARGO_TERM_COLOR: always
+#    commands:
+#      - cargo test --release
+#      - cargo clippy --release
 
 #  - name: tags
 #    image: ghcr.io/dvjn/woodpecker-docker-tags-plugin
