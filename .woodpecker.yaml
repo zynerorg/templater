@@ -9,6 +9,8 @@ steps:
     settings:
       target: builder
       tags: build
+      build_args:
+        SOURCE_DATE_EPOCH: "0"
       cache_images:
         - reg.zyner.org/internal/templater:cache
       repo: reg.zyner.org/internal/templater
@@ -37,6 +39,8 @@ steps:
   - name: build
     image: woodpeckerci/plugin-docker-buildx
     settings:
+      build_args:
+        SOURCE_DATE_EPOCH: "0"
       cache_images:
         - reg.zyner.org/internal/templater:cache
       repo: reg.zyner.org/internal/templater
