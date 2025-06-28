@@ -27,16 +27,17 @@ steps:
       - cargo test --release
       - cargo clippy --release
 
-  - name: tags
-    image: ghcr.io/dvjn/woodpecker-docker-tags-plugin
-    settings:
-      tags: |
-        edge -v latest
-        pr
-        sha
+#  - name: tags
+#    image: ghcr.io/dvjn/woodpecker-docker-tags-plugin
+#    settings:
+#      tags: |
+#        edge -v latest
+#        pr
+#        sha
   - name: publish
     image: woodpeckerci/plugin-kaniko
     settings:
+      tags: latest
       cache_images:
         - reg.zyner.org/internal/templater:cache
       repo: reg.zyner.org/internal/templater
