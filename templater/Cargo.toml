@@ -2,7 +2,7 @@
 name = "templater"
 version = "0.1.0"
 edition = "2024"
-authors = ["Herman Andgart <nahfe@nahfe.dev>"]
+authors = ["Zyner <support@zyner.org", "Herman Andgart <nahfe@nahfe.dev>", "Axel Olausson Holtenäs <me@vermium.dev>"]
 license = "GPL-3.0-or-later"
 
 [dependencies]
