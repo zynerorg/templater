@@ -144,7 +144,7 @@ impl Record {
         }
 
         for mut domain in domains.0.into_iter().chain(reverse_domains.0.into_iter()) {
-            if (domain.reverse) {
+            if domain.reverse {
                 domain.addresses.sort_by(|a, b| a.address.cmp(&b.address));
             } else {
                 domain.addresses.sort_by(|a, b| {
