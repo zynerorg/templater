@@ -127,14 +127,7 @@ impl From<IpAddr> for RType {
 }
 
 impl Record {
-    fn push(config: &Rfc1035, mut addresses: Vec<AddressMain>) -> anyhow::Result<()> {
-        addresses.sort_by(|a, b| {
-            a.dns_name.cmp(&b.dns_name).then(
-                a.address
-                    .map(|net| net.is_ipv6())
-                    .cmp(&b.address.map(|net| net.is_ipv6())),
-            )
-        });
+    fn push(config: &Rfc1035, addresses: Vec<AddressMain>) -> anyhow::Result<()> {
         // FIXME: Cross-domain CNAME
         let domains: Domains = addresses.clone().into();
         let reverse_domains = Domains::reverse_from_addresses(addresses);
@@ -150,7 +143,19 @@ impl Record {
             Self::clean_directory(directory, &domains)?;
         }
 
-        for domain in domains.0.into_iter().chain(reverse_domains.0.into_iter()) {
+        for mut domain in domains.0.into_iter().chain(reverse_domains.0.into_iter()) {
+            if (domain.reverse) {
+                domain.addresses.sort_by(|a, b| a.address.cmp(&b.address));
+            } else {
+                domain.addresses.sort_by(|a, b| {
+                    a.dns_name.cmp(&b.dns_name).then(
+                        a.address
+                            .map(|net| net.is_ipv6())
+                            .cmp(&b.address.map(|net| net.is_ipv6())),
+                    )
+                });
+            }
+
             info!("Converting addresses to RFC1035 format");
             let records = domain
                 .addresses
