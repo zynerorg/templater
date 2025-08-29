@@ -36,17 +36,16 @@ impl Cli {
         let mut cmds = Vec::new();
         while let Some(c) = cli.next() {
             let mut config: ConfigI = c.try_into()?;
-            if let Some(peek) = cli.peek() {
-                if matches!(peek.mode, Mode::Filter(_)) {
-                    if let Mode::Filter(filters) = cli.next().unwrap().mode {
-                        let mut filters = Some(filters);
-                        if let Some(f) = config.providers.get_mut(0) {
-                            f.filters = filters.take();
-                        }
-                        if let Some(f) = config.consumers.get_mut(0) {
-                            f.filters = filters.take();
-                        }
-                    }
+            if let Some(peek) = cli.peek()
+                && matches!(peek.mode, Mode::Filter(_))
+                && let Mode::Filter(filters) = cli.next().unwrap().mode
+            {
+                let mut filters = Some(filters);
+                if let Some(f) = config.providers.get_mut(0) {
+                    f.filters = filters.take();
+                }
+                if let Some(f) = config.consumers.get_mut(0) {
+                    f.filters = filters.take();
                 }
             }
             cmds.push(config);

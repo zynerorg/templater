@@ -128,15 +128,15 @@ impl NetboxClient {
             address.vlan = vlan.cloned();
             address.prefix = address_prefix.copied();
 
-            if let Some(tenant) = &address.tenant {
-                if let Some(other) = tenants.iter().find(|t| tenant.id == t.id) {
-                    address.full_tenant = Some(other.clone());
-                }
+            if let Some(tenant) = &address.tenant
+                && let Some(other) = tenants.iter().find(|t| tenant.id == t.id)
+            {
+                address.full_tenant = Some(other.clone());
             }
-            if let Some(Scope::Site(site)) = &address.scope {
-                if let Some(other) = sites.iter().find(|s| site.id == s.id) {
-                    address.full_site = Some(other.clone());
-                }
+            if let Some(Scope::Site(site)) = &address.scope
+                && let Some(other) = sites.iter().find(|s| site.id == s.id)
+            {
+                address.full_site = Some(other.clone());
             }
         }
 

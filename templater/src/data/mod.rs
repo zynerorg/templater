@@ -117,7 +117,7 @@ impl Domains {
                     domains.push(domain);
                 }
                 domain = Domain {
-                    name: domain_i.to_string(),
+                    name: domain_i.clone(),
                     addresses: Vec::new(),
                     reverse,
                 };
