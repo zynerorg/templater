@@ -166,10 +166,10 @@ impl Record {
 
             let mut w = if let Some(directory) = &config.output {
                 let path = directory.join(&domain.name);
-                if let Err(err) = create_dir(directory) {
-                    if err.kind() != std::io::ErrorKind::AlreadyExists {
-                        return Err(err.into());
-                    }
+                if let Err(err) = create_dir(directory)
+                    && err.kind() != std::io::ErrorKind::AlreadyExists
+                {
+                    return Err(err.into());
                 }
                 debug!(
                     "Extracting zone {} from file {}",
@@ -258,15 +258,13 @@ impl Record {
             records.push(Self { name, rtype, rdata });
         }
 
-        if !reverse {
-            if let Some(aliases) = ip.alias {
-                for alias in aliases {
-                    records.push(Self {
-                        name: alias,
-                        rtype: RType::CNAME,
-                        rdata: ip.dns_name.as_ref()?.to_owned(),
-                    });
-                }
+        if !reverse && let Some(aliases) = ip.alias {
+            for alias in aliases {
+                records.push(Self {
+                    name: alias,
+                    rtype: RType::CNAME,
+                    rdata: ip.dns_name.as_ref()?.to_owned(),
+                });
             }
         }
 
