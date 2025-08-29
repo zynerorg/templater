@@ -5,30 +5,10 @@ when:
 
 steps:
   - name: test
-    image: rust:1.87.0-alpine3.22
-    environment:
-      CARGO_TERM_COLOR: always
-      RUSTFLAGS: "-Dwarnings"
+    image: nixos/nix:2.31.0
     commands:
-      - apk add --no-cache build-base
-      - rustup component add clippy
-      - cargo check
-      - cargo test
-      - cargo clippy
-
-  - name: tags
-    image: ghcr.io/dvjn/woodpecker-docker-tags-plugin
-    settings:
-      tags: |
-        edge -v latest
-        pr
-        sha
-  - name: publish
-    image: woodpeckerci/plugin-kaniko
-    settings:
-      registry: reg.zyner.org
-      repo: internal/templater
-      username:
-        from_secret: registry-username
-      password:
-        from_secret: registry-password
+      - nix --extra-experimental-features "nix-command flakes" build --print-build-logs --no-link .#clippy .#test
+  - name: build
+    image: nixos/nix:2.31.0
+    commands:
+      - nix --extra-experimental-features "nix-command flakes" build --print-build-logs --no-link .#dockerImage

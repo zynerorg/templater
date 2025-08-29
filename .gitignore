@@ -1,5 +1,7 @@
 /target
 /zonefiles
+/result
+/.direnv
 .idea
 .env
 config.yaml
