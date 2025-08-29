@@ -5,7 +5,7 @@ when:
 
 steps:
   - name: test
-    image: rust:1.87.0-alpine3.22
+    image: rust:1.89.0-alpine3.22
     environment:
       CARGO_TERM_COLOR: always
       RUSTFLAGS: "-Dwarnings"
