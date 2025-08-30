@@ -25,7 +25,9 @@
       fenix' = fenix.packages.${system};
 
       toolchain = with fenix'; combine [
-        default.toolchain
+        minimal.rustc
+        minimal.cargo
+        default.clippy
         targets.${target}.latest.rust-std
       ];
       naersk' = naersk.lib.${system}.override {
@@ -56,7 +58,7 @@
       };
 
       devShells.default = pkgs.mkShell {
-        buildInputs = [ toolchain ];
+        buildInputs = [ fenix'.default.toolchain ];
       };
     }
   );
