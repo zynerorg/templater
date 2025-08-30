@@ -7,8 +7,18 @@ steps:
   - name: test
     image: nixos/nix:2.31.0
     commands:
-      - nix --extra-experimental-features "nix-command flakes" build --print-build-logs --no-link .#clippy .#test
+      - nix-shell -p attic-client --command "attic login cache https://attic.nahfe.dev $ATTIC_TOKEN"
+      - nix-shell -p attic-client --command "attic use zyner-test"
+      - nix-store --query --requisites --include-outputs $(nix --extra-experimental-features nix-command path-info --derivation $(nix --extra-experimental-features 'nix-command flakes' build --print-out-paths .#clippy .#test)) | nix-shell -p attic-client --command "attic push zyner-test --stdin"
+    environment:
+      ATTIC_TOKEN:
+        from_secret: experiment-nix-cache
   - name: build
     image: nixos/nix:2.31.0
     commands:
-      - nix --extra-experimental-features "nix-command flakes" build --print-build-logs --no-link .#dockerImage
+      - nix-shell -p attic-client --command "attic login cache https://attic.nahfe.dev $ATTIC_TOKEN"
+      - nix-shell -p attic-client --command "attic use zyner-test"
+      - nix-store --query --requisites --include-outputs $(nix --extra-experimental-features nix-command path-info --derivation $(nix --extra-experimental-features 'nix-command flakes' build --print-out-paths .#dockerImage)) | nix-shell -p attic-client --command "attic push zyner-test --stdin"
+    environment:
+      ATTIC_TOKEN:
+        from_secret: experiment-nix-cache
