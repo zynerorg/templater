@@ -52,7 +52,10 @@ impl NetboxClient {
         auth.set_sensitive(true);
         headers.insert(AUTHORIZATION, auth);
 
-        let client = Client::builder().default_headers(headers).build()?;
+        let client = Client::builder()
+            .user_agent(format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")))
+            .default_headers(headers)
+            .build()?;
 
         Ok(Self {
             client,
