@@ -3,3 +3,8 @@
 .idea
 .env
 config.yaml
+
+# Nix
+result
+result-*
+.direnv
