@@ -163,6 +163,10 @@ impl Record {
                 .filter_map(|addr| Self::from_address(addr, domain.reverse))
                 .flatten()
                 .collect::<Vec<Self>>();
+            if records.is_empty() {
+                info!("No records for zone {}, skipping", domain.name);
+                continue;
+            }
 
             let mut w = if let Some(directory) = &config.output {
                 let path = directory.join(&domain.name);
