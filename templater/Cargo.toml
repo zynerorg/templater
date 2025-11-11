@@ -5,18 +5,18 @@ edition = "2024"
 license = "GPL-3.0-or-later"
 
 [dependencies]
-clap = { version = "4.5.40", features = ["derive", "env"] }
+clap = { version = "4.5.51", features = ["derive", "env"] }
 pretty_env_logger = "0.5.0"
-reqwest = { version = "0.12.19", default-features = false, features = ["blocking", "json", "rustls-tls-native-roots"] }
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.140"
-serde_derive = "1.0.219"
-log = "0.4.27"
-anyhow = "1.0.98"
+reqwest = { version = "0.12.24", default-features = false, features = ["blocking", "json", "rustls-tls-native-roots"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+serde_derive = "1.0.228"
+log = "0.4.28"
+anyhow = "1.0.100"
 dotenvy = "0.15.7"
-serde_with = "3.12.0"
+serde_with = "3.15.1"
 ipnet = { version = "2.11.0", features = ["serde"] }
-chrono = { version = "0.4.41", features = ["serde"] }
+chrono = { version = "0.4.42", features = ["serde"] }
 tldextract = "0.6.0"
 serde_yaml = "0.9.34"
 serde-tuple-vec-map = "1.0.1"
