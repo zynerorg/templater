@@ -15,9 +15,9 @@ pub struct Site {
     pub name: String,
     pub slug: String,
     pub status: Status,
-    pub region: Region,
-    pub group: Group,
-    pub tenant: BriefTenant,
+    pub region: Option<Region>,
+    pub group: Option<Group>,
+    pub tenant: Option<BriefTenant>,
     #[serde(deserialize_with = "super::common::non_empty_str")]
     pub facility: Option<String>,
     #[serde(deserialize_with = "super::common::non_empty_str")]
