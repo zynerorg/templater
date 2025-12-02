@@ -129,7 +129,7 @@ impl CloudflareClient {
                     .into();
                 domain_out.cloned().map(|domain| {
                     let new = Records::from_domain(&self.config, domain)?;
-                    Ok((zone.id, old, new))
+                    Ok((zone.id, old.filter_other(), new))
                 })
             })
             .collect::<Result<Vec<_>>>()?;

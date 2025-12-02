@@ -101,6 +101,10 @@ impl Records {
         }
         Ok(records.into())
     }
+
+    pub fn filter_other(self) -> Self {
+        Self(self.0.into_iter().filter(|r| !matches!(r, Record::Other)).collect())
+    }
 }
 
 impl Sub<&Self> for Records {
