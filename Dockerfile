@@ -19,7 +19,7 @@ COPY . .
 RUN cargo build --release --target x86_64-unknown-linux-musl
 
 
-FROM alpine:3.22
+FROM alpine:3.23
 RUN adduser -u 1000 -D user
 RUN apk add --no-cache git jinja2-cli openssh-client
 COPY --from=builder /build/target/x86_64-unknown-linux-musl/release/templater /templater
