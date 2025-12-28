@@ -34,7 +34,7 @@ jobs:
           # list of Docker images to use as base name for tags
           images: |
             ghcr.io/zynerorg/templater
-            reg.zyner.org/internal/templater
+            registry.zyner.org/internal/templater
           # generate Docker tags based on the following events/attributes
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
@@ -58,7 +58,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
-          registry: reg.zyner.org
+          registry: registry.zyner.org
           username: ${{ secrets.HARBOR_USERNAME }}
           password: ${{ secrets.HARBOR_PASSWORD }}
 
