@@ -1,6 +1,7 @@
 {
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    systems.url = "github:nix-systems/default";
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -12,49 +13,55 @@
         nixpkgs.follows = "nixpkgs";
       };
     };
-    flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs =
     {
-      self,
       nixpkgs,
+      systems,
       fenix,
       naersk,
-      flake-utils,
       ...
     }:
-    flake-utils.lib.eachDefaultSystem (
-      system:
-      let
-        name = "templater";
-
-        pkgs = nixpkgs.legacyPackages.${system};
-        fenix' = fenix.packages.${system};
-        toolchain =
-          with fenix';
-          combine [
-            default.cargo
-            default.rustc
-          ];
-        naersk' = naersk.lib.${system}.override {
-          cargo = toolchain;
-          rustc = toolchain;
-        };
-      in
-      {
-        packages.default = naersk'.buildPackage {
-          inherit name;
-          src = ./.;
-          meta.mainProgram = name;
-        };
-
-        devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            toolchain
-            rust-analyzer
-          ];
-        };
-      }
-    );
+    let
+      eachSystem = nixpkgs.lib.genAttrs (import systems);
+      toolchain =
+        system:
+        with fenix.packages.${system};
+        with default;
+        combine [
+          cargo
+          rustc
+          clippy
+          rustfmt
+        ];
+    in
+    {
+      packages = eachSystem (system: {
+        default =
+          let
+            name = "templater";
+            toolchain' = toolchain system;
+            naersk' = naersk.lib.${system}.override {
+              cargo = toolchain';
+              rustc = toolchain';
+            };
+          in
+          naersk'.buildPackage {
+            inherit name;
+            src = ./.;
+            meta.mainProgram = name;
+          };
+      });
+      devShells = eachSystem (system: {
+        default =
+          with nixpkgs.legacyPackages.${system};
+          mkShell {
+            buildInputs = with pkgs; [
+              (toolchain system)
+              rust-analyzer
+            ];
+          };
+      });
+    };
 }
