@@ -96,7 +96,7 @@ impl NetboxClient {
 
     fn fetch_addresses(&self) -> Result<Vec<AddressMain>> {
         info!("Fetching netbox addresses");
-        let addresses: Vec<IpAddress> = self.get_list("/ipam/ip-addresses", None)?;
+        let addresses: Vec<IpAddress> = self.get_list("ipam/ip-addresses", None)?;
         let addresses = self.populate(addresses)?;
         Ok(addresses.into_iter().map(Into::into).collect())
     }
@@ -104,10 +104,10 @@ impl NetboxClient {
     fn populate(&self, mut addresses: Vec<IpAddress>) -> Result<Vec<IpAddress>> {
         info!("Populating netbox addresses with useful data");
         let prefixes: Vec<Prefix> =
-            self.get_list("/ipam/prefixes", Some(&[("ordering", "prefix")]))?;
+            self.get_list("ipam/prefixes", Some(&[("ordering", "prefix")]))?;
 
-        let tenants: Vec<Tenant> = self.get_list("/tenancy/tenants", None)?;
-        let sites: Vec<Site> = self.get_list("/dcim/sites", None)?;
+        let tenants: Vec<Tenant> = self.get_list("tenancy/tenants", None)?;
+        let sites: Vec<Site> = self.get_list("dcim/sites", None)?;
 
         for address in &mut addresses {
             let mut scope = None;
