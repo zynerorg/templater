@@ -18,6 +18,8 @@ use zoneparser::{RRType, Record as ZoneRecord, ZoneParser};
 use super::Consumer;
 use crate::data::{AddressMain, Domains, ip_net_to_reverse_dns};
 
+use anyhow::anyhow;
+
 #[serde_inline_default]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Args)]
 #[serde(deny_unknown_fields)]
@@ -286,7 +288,9 @@ impl Record {
     }
 
     fn extract_zone(path: &PathBuf) -> anyhow::Result<Vec<ZoneRecord>> {
-        Ok(ZoneParser::new(&File::open(path)?, ".").collect())
+        ZoneParser::new(&File::open(path)?, ".")
+            .map(|r| r.map_err(|e| anyhow!(e)))
+            .collect::<Result<Vec<_>, _>>()
     }
 
     // fn extract_soa(zone: &[Record]) -> anyhow::Result<usize> {
