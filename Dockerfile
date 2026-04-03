@@ -1,4 +1,4 @@
-FROM rust:1.89.0-alpine3.22 AS chef
+FROM rust:1.94.1-alpine3.22 AS chef
 ENV RUSTFLAGS=-Dwarnings
 WORKDIR /build
 RUN apk add --no-cache build-base && cargo install cargo-chef
