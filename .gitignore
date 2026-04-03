@@ -8,3 +8,5 @@ config.yaml
 result
 result-*
 .direnv
+
+testconfigs

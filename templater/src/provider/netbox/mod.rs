@@ -29,6 +29,9 @@ pub struct Netbox {
     /// Netbox API endpoint
     #[arg(long, env("NETBOX_ENDPOINT"))]
     pub endpoint: String,
+    /// Netbox API key
+    #[arg(long, env("NETBOX_ID"))]
+    pub key: Option<String>,
     /// Netbox API token
     #[arg(long, env("NETBOX_TOKEN"))]
     pub token: String,
@@ -36,7 +39,7 @@ pub struct Netbox {
 
 impl Provider for Netbox {
     fn provide(self) -> Result<Vec<AddressMain>> {
-        NetboxClient::new(self.endpoint, &self.token)?.fetch_addresses()
+        NetboxClient::new(self.endpoint, self.key.as_deref(), &self.token)?.fetch_addresses()
     }
 }
 
@@ -46,14 +49,27 @@ struct NetboxClient {
 }
 
 impl NetboxClient {
-    fn new(base_address: String, token: &str) -> Result<Self> {
+    fn new(base_address: String, key: Option<&str>, token: &str) -> Result<Self> {
         let mut headers = HeaderMap::new();
-        let mut auth = HeaderValue::from_str(&format!("Token {token}"))?;
+
+        // If key field exists use token v2, otherwise use v1
+        let mut auth: HeaderValue = if let Some(key) = key {
+            debug!("Using netbox v2 API token");
+            HeaderValue::from_str(&format!("Bearer nbt_{key}.{token}"))?
+        } else {
+            debug!("Using netbox v1 API token");
+            HeaderValue::from_str(&format!("Token {token}"))?
+        };
+
         auth.set_sensitive(true);
         headers.insert(AUTHORIZATION, auth);
 
         let client = Client::builder()
-            .user_agent(format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")))
+            .user_agent(format!(
+                "{}/{}",
+                env!("CARGO_PKG_NAME"),
+                env!("CARGO_PKG_VERSION")
+            ))
             .default_headers(headers)
             .build()?;
 
