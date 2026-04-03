@@ -29,6 +29,9 @@ pub struct Netbox {
     /// Netbox API endpoint
     #[arg(long, env("NETBOX_ENDPOINT"))]
     pub endpoint: String,
+    /// Netbox API id
+    #[arg(long, env("NETBOX_ID"))]
+    pub id: String,
     /// Netbox API token
     #[arg(long, env("NETBOX_TOKEN"))]
     pub token: String,
@@ -36,7 +39,7 @@ pub struct Netbox {
 
 impl Provider for Netbox {
     fn provide(self) -> Result<Vec<AddressMain>> {
-        NetboxClient::new(self.endpoint, &self.token)?.fetch_addresses()
+        NetboxClient::new(self.endpoint, &self.id, &self.token)?.fetch_addresses()
     }
 }
 
@@ -46,14 +49,18 @@ struct NetboxClient {
 }
 
 impl NetboxClient {
-    fn new(base_address: String, token: &str) -> Result<Self> {
+    fn new(base_address: String, id: &str, token: &str) -> Result<Self> {
         let mut headers = HeaderMap::new();
-        let mut auth = HeaderValue::from_str(&format!("Token {token}"))?;
+        let mut auth = HeaderValue::from_str(&format!("Bearer nbt_{id}.{token}"))?;
         auth.set_sensitive(true);
         headers.insert(AUTHORIZATION, auth);
 
         let client = Client::builder()
-            .user_agent(format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")))
+            .user_agent(format!(
+                "{}/{}",
+                env!("CARGO_PKG_NAME"),
+                env!("CARGO_PKG_VERSION")
+            ))
             .default_headers(headers)
             .build()?;
 
