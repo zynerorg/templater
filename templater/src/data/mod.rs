@@ -1,4 +1,4 @@
-use std::{fmt::Debug, net::IpAddr, num::ParseFloatError, str::FromStr};
+use std::{fmt::Debug, net::IpAddr, num::ParseFloatError, ops::Add, str::FromStr};
 
 use anyhow::{Error, anyhow};
 use clap::{ArgMatches, Args, Command, FromArgMatches, error::ErrorKind};
@@ -102,6 +102,14 @@ impl From<Vec<AddressMain>> for Domains {
     }
 }
 
+impl Add for Domains {
+    type Output = Self;
+    fn add(mut self, rhs: Self) -> Self::Output {
+        self.0.extend(rhs.0);
+        self
+    }
+}
+
 impl Domains {
     fn from_addresses(mut addresses: Vec<AddressMain>, reverse: bool) -> Self {
         let mut domains = Vec::new();
@@ -138,6 +146,25 @@ impl Domains {
         }
 
         Self::from_addresses(addresses, true)
+    }
+
+    pub fn dot_format(&mut self) {
+        for domain in &mut self.0 {
+            domain.name = format!("{}.", domain.name);
+            for address in &mut domain.addresses {
+                if let Some(name) = &address.domain {
+                    address.domain = Some(format!("{name}."));
+                }
+                if let Some(name) = &address.dns_name {
+                    address.dns_name = Some(format!("{name}."));
+                }
+                if let Some(aliases) = &mut address.alias {
+                    for name in aliases {
+                        *name = format!("{name}.");
+                    }
+                }
+            }
+        }
     }
 }
 
