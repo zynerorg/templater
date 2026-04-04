@@ -9,16 +9,17 @@ use std::{
 use chrono::Utc;
 use clap::Args;
 use derive_more::Display;
+use domain::{
+    base::{Rtype, iana::Class},
+    zonefile::inplace::{Entry, ScannedRecord, Zonefile},
+};
 use ipnet::IpNet;
 use log::{debug, info};
 use serde_derive::{Deserialize, Serialize};
 use serde_inline_default::serde_inline_default;
-use zoneparser::{RRType, Record as ZoneRecord, ZoneParser};
 
 use super::Consumer;
 use crate::data::{AddressMain, Domains, ip_net_to_reverse_dns};
-
-use anyhow::anyhow;
 
 #[serde_inline_default]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Args)]
@@ -106,18 +107,16 @@ enum RType {
     PTR,
 }
 
-impl PartialEq<ZoneRecord> for Record {
-    fn eq(&self, other: &ZoneRecord) -> bool {
-        if other.data.len() != 1 {
-            return false;
-        }
-        let other_data = &other.data[0].data;
-        self.rtype == other.rrtype && self.name == other.name && self.rdata == *other_data
+impl PartialEq<ScannedRecord> for Record {
+    fn eq(&self, other: &ScannedRecord) -> bool {
+        self.rtype == other.rtype()
+            && self.name == other.owner().fmt_with_dot().to_string()
+            && self.rdata == other.data().to_string()
     }
 }
 
-impl PartialEq<RRType> for RType {
-    fn eq(&self, other: &RRType) -> bool {
+impl PartialEq<Rtype> for RType {
+    fn eq(&self, other: &Rtype) -> bool {
         self.to_string() == other.to_string()
     }
 }
@@ -132,20 +131,16 @@ impl Record {
     fn push(config: &Rfc1035, addresses: Vec<AddressMain>) -> anyhow::Result<()> {
         // FIXME: Cross-domain CNAME
         let domains: Domains = addresses.clone().into();
-        let reverse_domains = Domains::reverse_from_addresses(addresses);
+        let mut domains = domains + Domains::reverse_from_addresses(addresses);
+        domains.dot_format();
 
         if let Some(directory) = &config.output {
             info!("Cleaning directory");
-            let domains: Vec<&str> = domains
-                .0
-                .iter()
-                .chain(reverse_domains.0.iter())
-                .map(|d| d.name.as_str())
-                .collect();
+            let domains: Vec<&str> = domains.0.iter().map(|d| d.name.as_str()).collect();
             Self::clean_directory(directory, &domains)?;
         }
 
-        for mut domain in domains.0.into_iter().chain(reverse_domains.0.into_iter()) {
+        for mut domain in domains.0 {
             if domain.reverse {
                 domain.addresses.sort_by(|a, b| a.address.cmp(&b.address));
             } else {
@@ -184,7 +179,7 @@ impl Record {
                 );
                 let zone = Self::extract_zone(&path).unwrap_or_default();
 
-                if Self::compare_zones(&records, &zone) {
+                if Self::compare_zones(&records, zone) {
                     info!("Zones are equal, not modifying");
                     continue;
                 }
@@ -252,9 +247,12 @@ impl Record {
 
             let dns = ip.dns_name.as_ref()?.to_owned();
             let (name, rdata) = if reverse {
-                let address = ip_net_to_reverse_dns(
-                    &IpNet::new(address, ip.prefix?.prefix_len()).ok()?,
-                    false,
+                let address = format!(
+                    "{}.",
+                    ip_net_to_reverse_dns(
+                        &IpNet::new(address, ip.prefix?.prefix_len()).ok()?,
+                        false,
+                    )
                 );
                 (address, dns)
             } else {
@@ -287,10 +285,8 @@ impl Record {
         )
     }
 
-    fn extract_zone(path: &PathBuf) -> anyhow::Result<Vec<ZoneRecord>> {
-        ZoneParser::new(&File::open(path)?, ".")
-            .map(|r| r.map_err(|e| anyhow!(e)))
-            .collect::<Result<Vec<_>, _>>()
+    fn extract_zone(path: &PathBuf) -> anyhow::Result<Zonefile> {
+        Ok(Zonefile::load(&mut File::open(path)?)?)
     }
 
     // fn extract_soa(zone: &[Record]) -> anyhow::Result<usize> {
@@ -306,13 +302,26 @@ impl Record {
     // Ok(soa)
     // }
 
-    fn compare_zones(a: &[Record], b: &[ZoneRecord]) -> bool {
-        let b: Vec<&ZoneRecord> = b.iter().filter(|r| r.rrtype != RRType::SOA).collect();
+    fn compare_zones(a: &[Record], b: Zonefile) -> bool {
+        let b: Vec<ScannedRecord> = b
+            .filter_map(|a| {
+                a.ok().and_then(|entry| {
+                    if let Entry::Record(record) = entry {
+                        if record.class() == Class::IN && record.rtype() == Rtype::SOA {
+                            return None;
+                        }
+                        Some(record)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect();
         if b.is_empty() || a.len() != b.len() {
             return false;
         }
 
-        a.iter().zip(b.iter()).filter(|(a, b)| **a == ***b).count() == a.len()
+        a.iter().zip(b.iter()).filter(|(a, b)| **a == **b).count() == a.iter().len()
     }
 
     fn clean_directory(directory: &Path, domains: &[&str]) -> anyhow::Result<()> {
