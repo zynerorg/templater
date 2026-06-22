@@ -29,10 +29,6 @@ pub struct IpAddress {
     pub tenant: Option<BriefTenant>,
     pub status: Status,
     pub role: Option<Role>,
-    #[serde(deserialize_with = "super::common::non_empty_str")]
-    pub assigned_object_type: Option<String>,
-    pub assigned_object_id: Option<i64>,
-    pub assigned_object: Option<AssignedObject>,
     pub nat_inside: Option<Value>,
     pub nat_outside: Vec<Value>,
     #[serde(deserialize_with = "super::common::non_empty_str")]
