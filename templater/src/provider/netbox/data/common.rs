@@ -44,37 +44,6 @@ pub struct BriefVrf {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct AssignedObject {
-    pub id: i64,
-    pub url: String,
-    pub display: String,
-    pub device: BriefDevice,
-    pub name: String,
-    pub description: String,
-    pub cable: BriefCable,
-    #[serde(rename = "_occupied")]
-    pub occupied: bool,
-}
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct BriefDevice {
-    pub id: i64,
-    pub url: String,
-    pub display: String,
-    pub name: String,
-    pub description: String,
-}
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct BriefCable {
-    pub id: i64,
-    pub url: String,
-    pub display: String,
-    pub label: String,
-    pub description: String,
-}
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tag {
     pub id: i64,
     pub url: String,

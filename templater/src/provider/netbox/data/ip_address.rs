@@ -7,9 +7,7 @@ use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::{
-    common::{
-        AssignedObject, BriefSite, BriefTenant, BriefVlan, BriefVrf, Family, Intermediate, Tag,
-    },
+    common::{BriefSite, BriefTenant, BriefVlan, BriefVrf, Family, Intermediate, Tag},
     prefix::Scope,
     site::Site,
     tenant::Tenant,
